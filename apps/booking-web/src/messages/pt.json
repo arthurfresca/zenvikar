@@ -1,0 +1,8 @@
+{
+  "booking": {
+    "title": "Agendar um Compromisso",
+    "selectService": "Selecione um serviço",
+    "selectDate": "Selecione uma data",
+    "confirm": "Confirmar Agendamento"
+  }
+}

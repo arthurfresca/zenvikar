@@ -1,0 +1,50 @@
+name: Migration Test
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  migration-test:
+    name: Test Database Migrations
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: zenvikar
+          POSTGRES_USER: zenvikar
+          POSTGRES_PASSWORD: zenvikar
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U zenvikar"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: zenvikar
+      PGPASSWORD: zenvikar
+      PGDATABASE: zenvikar
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply migrations in order
+        run: |
+          find apps/api/internal -path '*/migrations/*.sql' \
+            | while read -r f; do echo "$(basename "$f") $f"; done \
+            | sort \
+            | while read -r _ path; do
+                echo "Applying: $path"
+                psql -f "$path"
+              done
+
+      - name: Verify tables exist
+        run: |
+          psql -c "\dt" | grep -q tenants
+          psql -c "\dt" | grep -q users
+          psql -c "\dt" | grep -q tenant_memberships
+          psql -c "\dt" | grep -q bookings
+          echo "All expected tables exist"

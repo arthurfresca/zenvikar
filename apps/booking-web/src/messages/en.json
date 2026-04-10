@@ -1,0 +1,8 @@
+{
+  "booking": {
+    "title": "Book an Appointment",
+    "selectService": "Select a service",
+    "selectDate": "Select a date",
+    "confirm": "Confirm Booking"
+  }
+}

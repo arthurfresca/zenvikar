@@ -1,0 +1,168 @@
+services:
+  traefik:
+    image: traefik:latest
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  api:
+    build:
+      context: ./apps/api
+    ports:
+      - "8081:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.zenvikar.localhost`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.routers.api.priority=10"
+      - "traefik.http.services.api.loadbalancer.server.port=8080"
+    environment:
+      - DATABASE_URL=postgres://zenvikar:zenvikar@postgres:5432/zenvikar?sslmode=disable
+      - REDIS_URL=redis:6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
+      - BASE_DOMAIN=zenvikar.localhost
+      - PORT=8080
+    depends_on:
+      - postgres
+      - redis
+
+  marketing-web:
+    build:
+      context: .
+      dockerfile: apps/marketing-web/Dockerfile
+    ports:
+      - "3010:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.marketing.rule=Host(`zenvikar.localhost`)"
+      - "traefik.http.routers.marketing.entrypoints=web"
+      - "traefik.http.routers.marketing.priority=10"
+      - "traefik.http.services.marketing.loadbalancer.server.port=3000"
+
+  booking-web:
+    build:
+      context: .
+      dockerfile: apps/booking-web/Dockerfile
+    ports:
+      - "3011:3001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.booking.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.zenvikar.localhost`)"
+      - "traefik.http.routers.booking.entrypoints=web"
+      - "traefik.http.routers.booking.priority=1"
+      - "traefik.http.routers.booking.middlewares=booking-headers"
+      - "traefik.http.middlewares.booking-headers.headers.customrequestheaders.X-Forwarded-Host={host}"
+      - "traefik.http.services.booking.loadbalancer.server.port=3001"
+    environment:
+      - NEXT_PUBLIC_BASE_DOMAIN=zenvikar.localhost
+      - API_INTERNAL_URL=http://api:8080
+
+  tenant-web:
+    build:
+      context: .
+      dockerfile: apps/tenant-web/Dockerfile
+    ports:
+      - "3012:3002"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.tenant.rule=Host(`manage.zenvikar.localhost`)"
+      - "traefik.http.routers.tenant.entrypoints=web"
+      - "traefik.http.routers.tenant.priority=10"
+      - "traefik.http.services.tenant.loadbalancer.server.port=3002"
+
+  admin-web:
+    build:
+      context: .
+      dockerfile: apps/admin-web/Dockerfile
+    ports:
+      - "3013:3003"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin.rule=Host(`admin.zenvikar.localhost`)"
+      - "traefik.http.routers.admin.entrypoints=web"
+      - "traefik.http.routers.admin.priority=10"
+      - "traefik.http.services.admin.loadbalancer.server.port=3003"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: zenvikar
+      POSTGRES_USER: zenvikar
+      POSTGRES_PASSWORD: zenvikar
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.100.0
+    volumes:
+      - ./infra/observability/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      - loki
+      - tempo
+
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    volumes:
+      - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+
+  loki:
+    image: grafana/loki:3.1.0
+    volumes:
+      - ./infra/observability/loki-config.yaml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    volumes:
+      - ./infra/observability/tempo-config.yaml:/etc/tempo/config.yaml
+      - tempo-data:/var/tempo
+    command: -config.file=/etc/tempo/config.yaml
+    ports:
+      - "3200:3200"
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning
+      - grafana-data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+
+volumes:
+  pgdata:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  grafana-data:

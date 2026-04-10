@@ -1,0 +1,27 @@
+name: Docker Build
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-api:
+    name: Build API Image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t zenvikar/api:${{ github.sha }} ./apps/api
+
+  build-frontend:
+    name: Build Frontend Images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        app: [marketing-web, booking-web, tenant-web, admin-web]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t zenvikar/${{ matrix.app }}:${{ github.sha }} ./apps/${{ matrix.app }}
