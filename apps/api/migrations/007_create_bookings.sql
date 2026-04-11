@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS bookings (
     CHECK (end_time > start_time)
 );
 
--- Prevent double-booking per tenant+service+time
 CREATE UNIQUE INDEX IF NOT EXISTS idx_bookings_no_overlap
     ON bookings(tenant_id, service_id, start_time)
     WHERE status != 'cancelled';

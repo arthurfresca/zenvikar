@@ -2,16 +2,11 @@ package availability
 
 import (
 	"database/sql"
-	"embed"
-	"fmt"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/zenvikar/api/internal/platform"
 )
-
-//go:embed migrations/*.sql
-var migrationsFS embed.FS
 
 // AvailabilityModule implements the platform.Module interface for the availability domain.
 type AvailabilityModule struct{}
@@ -27,21 +22,9 @@ func (m *AvailabilityModule) Name() string {
 }
 
 // RegisterRoutes registers availability-related HTTP routes.
-// Currently a placeholder — routes will be added when availability management endpoints are implemented.
-func (m *AvailabilityModule) RegisterRoutes(router chi.Router, deps platform.Dependencies) {
-	// Routes will be registered when availability management endpoints are implemented.
-}
+func (m *AvailabilityModule) RegisterRoutes(router chi.Router, deps platform.Dependencies) {}
 
-// Migrate runs the availability database migrations.
+// Migrate is a no-op — migrations are handled centrally by the migrations package.
 func (m *AvailabilityModule) Migrate(db *sql.DB) error {
-	data, err := migrationsFS.ReadFile("migrations/006_create_availability.sql")
-	if err != nil {
-		return fmt.Errorf("reading availability migration: %w", err)
-	}
-
-	if _, err := db.Exec(string(data)); err != nil {
-		return fmt.Errorf("executing availability migration: %w", err)
-	}
-
 	return nil
 }

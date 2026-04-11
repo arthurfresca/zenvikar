@@ -33,13 +33,10 @@ jobs:
 
       - name: Apply migrations in order
         run: |
-          find apps/api/internal -path '*/migrations/*.sql' \
-            | while read -r f; do echo "$(basename "$f") $f"; done \
-            | sort \
-            | while read -r _ path; do
-                echo "Applying: $path"
-                psql -f "$path"
-              done
+          for f in $(ls apps/api/migrations/*.sql | sort); do
+            echo "Applying: $f"
+            psql -f "$f"
+          done
 
       - name: Verify tables exist
         run: |

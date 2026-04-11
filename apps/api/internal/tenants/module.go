@@ -2,18 +2,13 @@ package tenants
 
 import (
 	"database/sql"
-	"embed"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/zenvikar/api/internal/platform"
 )
-
-//go:embed migrations/*.sql
-var migrationsFS embed.FS
 
 // TenantsModule implements the platform.Module interface for the tenants domain.
 type TenantsModule struct{}
@@ -75,17 +70,7 @@ func (m *TenantsModule) RegisterRoutes(router chi.Router, deps platform.Dependen
 	})
 }
 
-// Migrate runs the tenants database migrations.
+// Migrate is a no-op — migrations are handled centrally by the migrations package.
 func (m *TenantsModule) Migrate(db *sql.DB) error {
-	data, err := migrationsFS.ReadFile("migrations/001_create_tenants.sql")
-	if err != nil {
-		return fmt.Errorf("reading tenants migration: %w", err)
-	}
-
-	_, err = db.Exec(string(data))
-	if err != nil {
-		return fmt.Errorf("executing tenants migration: %w", err)
-	}
-
 	return nil
 }

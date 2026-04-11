@@ -21,6 +21,7 @@ import (
 	"github.com/zenvikar/api/internal/platform/logger"
 	appmiddleware "github.com/zenvikar/api/internal/platform/middleware"
 	appotel "github.com/zenvikar/api/internal/platform/otel"
+	"github.com/zenvikar/api/migrations"
 )
 
 func main() {
@@ -95,11 +96,9 @@ func main() {
 	}
 
 	// Run migrations
-	for _, m := range modules {
-		if err := m.Migrate(db); err != nil {
-			log.Error("migration failed", "module", m.Name(), "error", err)
-			os.Exit(1)
-		}
+	if err := migrations.RunAll(db, log); err != nil {
+		log.Error("migration failed", "error", err)
+		os.Exit(1)
 	}
 
 	// Start server with graceful shutdown

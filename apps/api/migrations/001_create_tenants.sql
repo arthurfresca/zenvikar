@@ -1,4 +1,4 @@
-CREATE TABLE tenants (
+CREATE TABLE IF NOT EXISTS tenants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     slug VARCHAR(63) NOT NULL UNIQUE,
     display_name VARCHAR(255) NOT NULL,
@@ -13,4 +13,4 @@ CREATE TABLE tenants (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_tenants_slug ON tenants(slug) WHERE enabled = true;
+CREATE INDEX IF NOT EXISTS idx_tenants_slug ON tenants(slug) WHERE enabled = true;
