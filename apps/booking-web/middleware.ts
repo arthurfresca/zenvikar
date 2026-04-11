@@ -5,7 +5,12 @@ export function middleware(request: NextRequest) {
     request.headers.get("x-forwarded-host") ||
     request.headers.get("host") ||
     "";
-  const response = NextResponse.next();
-  response.headers.set("x-tenant-host", host);
-  return response;
+
+  // Pass the host to server components via request headers
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-tenant-host", host);
+
+  return NextResponse.next({
+    request: { headers: requestHeaders },
+  });
 }

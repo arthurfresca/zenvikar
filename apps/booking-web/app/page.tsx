@@ -20,10 +20,7 @@ export default async function BookingPage() {
   }
 
   return (
-    <main
-      className="flex min-h-screen flex-col items-center justify-center p-8"
-      style={{ "--tenant-primary": tenant.colors.primary } as React.CSSProperties}
-    >
+    <main className="flex min-h-screen flex-col items-center justify-center p-8">
       <h1 className="text-3xl font-bold mb-2">{tenant.displayName}</h1>
       <p className="text-lg text-gray-600 mb-4">
         Book an Appointment

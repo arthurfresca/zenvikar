@@ -54,12 +54,11 @@ services:
       - "3011:3001"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.booking.rule=HostRegexp(`{subdomain:[a-z0-9-]+}.zenvikar.localhost`)"
+      - "traefik.http.routers.booking.rule=HostRegexp(`[a-z0-9-]+\\.zenvikar\\.localhost`)"
       - "traefik.http.routers.booking.entrypoints=web"
       - "traefik.http.routers.booking.priority=1"
-      - "traefik.http.routers.booking.middlewares=booking-headers"
-      - "traefik.http.middlewares.booking-headers.headers.customrequestheaders.X-Forwarded-Host={host}"
       - "traefik.http.services.booking.loadbalancer.server.port=3001"
+      - "traefik.http.services.booking.loadbalancer.passHostHeader=true"
     environment:
       - NEXT_PUBLIC_BASE_DOMAIN=zenvikar.localhost
       - API_INTERNAL_URL=http://api:8080

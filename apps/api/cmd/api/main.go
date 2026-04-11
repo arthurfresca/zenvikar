@@ -21,6 +21,7 @@ import (
 	"github.com/zenvikar/api/internal/platform/logger"
 	appmiddleware "github.com/zenvikar/api/internal/platform/middleware"
 	appotel "github.com/zenvikar/api/internal/platform/otel"
+	"github.com/zenvikar/api/internal/tenants"
 	"github.com/zenvikar/api/migrations"
 )
 
@@ -70,8 +71,10 @@ func main() {
 		Config: cfg,
 	}
 
-	// Register modules — modules are added here as they are implemented.
-	modules := []platform.Module{}
+	// Register modules
+	modules := []platform.Module{
+		tenants.New(),
+	}
 
 	// Set up router
 	router := chi.NewRouter()
