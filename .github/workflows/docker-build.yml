@@ -24,4 +24,4 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build Docker image
-        run: docker build -t zenvikar/${{ matrix.app }}:${{ github.sha }} ./apps/${{ matrix.app }}
+        run: docker build -t zenvikar/${{ matrix.app }}:${{ github.sha }} -f apps/${{ matrix.app }}/Dockerfile .
