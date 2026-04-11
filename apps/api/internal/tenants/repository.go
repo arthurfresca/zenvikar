@@ -20,15 +20,17 @@ func NewRepository(db *sql.DB) *Repository {
 // Returns the tenant or an error if not found or a database error occurs.
 func (r *Repository) FindBySlug(ctx context.Context, slug string) (*Tenant, error) {
 	var t Tenant
-	var logoURL sql.NullString
+	var logoURL, phone, email, address sql.NullString
 
 	err := r.db.QueryRowContext(ctx,
 		`SELECT id, slug, display_name, logo_url, color_primary, color_secondary,
-		        color_accent, timezone, default_locale, enabled, created_at, updated_at
+		        color_accent, phone, email, address, currency, slot_interval_minutes,
+		        timezone, default_locale, enabled, created_at, updated_at
 		 FROM tenants WHERE slug = $1`, slug,
 	).Scan(
 		&t.ID, &t.Slug, &t.DisplayName, &logoURL,
 		&t.ColorPrimary, &t.ColorSecondary, &t.ColorAccent,
+		&phone, &email, &address, &t.Currency, &t.SlotIntervalMinutes,
 		&t.Timezone, &t.DefaultLocale, &t.Enabled,
 		&t.CreatedAt, &t.UpdatedAt,
 	)
@@ -41,6 +43,15 @@ func (r *Repository) FindBySlug(ctx context.Context, slug string) (*Tenant, erro
 
 	if logoURL.Valid {
 		t.LogoURL = &logoURL.String
+	}
+	if phone.Valid {
+		t.Phone = &phone.String
+	}
+	if email.Valid {
+		t.Email = &email.String
+	}
+	if address.Valid {
+		t.Address = &address.String
 	}
 
 	return &t, nil

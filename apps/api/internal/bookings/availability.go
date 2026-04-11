@@ -27,18 +27,28 @@ type AvailabilityResult struct {
 // It takes all required data as input so it can be tested without a database.
 //
 // Parameters:
-//   - blockedDates: list of blocked dates for the tenant
-//   - openingHours: list of opening hours for the tenant (all days)
-//   - existingBookings: list of existing non-cancelled bookings for the tenant+service
+//   - blockedDates: list of blocked dates for the member
+//   - openingHours: list of opening hours for the service_member (all days)
+//   - existingBookings: list of existing non-cancelled bookings for the member
 //   - service: the service being booked (for duration and buffers)
-//   - startTime: the requested booking start time (in the tenant's local timezone)
+//   - startTime: the requested booking start time
+//   - slotIntervalMinutes: the tenant's slot interval (e.g. 15). Start time must align to this.
 func CheckAvailability(
 	blockedDates []availability.BlockedDate,
 	openingHours []availability.OpeningHours,
 	existingBookings []Booking,
 	service services.Service,
 	startTime time.Time,
+	slotIntervalMinutes int,
 ) (*AvailabilityResult, error) {
+	// Step 0: Validate slot alignment
+	if slotIntervalMinutes > 0 {
+		minuteOfDay := startTime.Hour()*60 + startTime.Minute()
+		if minuteOfDay%slotIntervalMinutes != 0 || startTime.Second() != 0 {
+			return &AvailabilityResult{Available: false, Reason: "invalid_slot_time"}, nil
+		}
+	}
+
 	// Step 1: Check if date is blocked
 	startDate := time.Date(startTime.Year(), startTime.Month(), startTime.Day(), 0, 0, 0, 0, startTime.Location())
 	for _, bd := range blockedDates {

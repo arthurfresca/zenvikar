@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS tenant_memberships (
     role VARCHAR(32) NOT NULL CHECK (role IN (
         'tenant_owner', 'tenant_manager', 'tenant_staff', 'tenant_finance_viewer'
     )),
+    photo_url TEXT,
+    description TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(tenant_id, user_id)
