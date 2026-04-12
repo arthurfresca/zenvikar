@@ -5,23 +5,84 @@ on:
     branches: [main]
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      marketing-web: ${{ steps.filter.outputs.marketing-web }}
+      booking-web: ${{ steps.filter.outputs.booking-web }}
+      tenant-web: ${{ steps.filter.outputs.tenant-web }}
+      admin-web: ${{ steps.filter.outputs.admin-web }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+            marketing-web:
+              - 'apps/marketing-web/**'
+              - 'packages/**'
+            booking-web:
+              - 'apps/booking-web/**'
+              - 'packages/**'
+            tenant-web:
+              - 'apps/tenant-web/**'
+              - 'packages/**'
+            admin-web:
+              - 'apps/admin-web/**'
+              - 'packages/**'
+
   build-api:
     name: Build API Image
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Build Docker image
         run: docker build -t zenvikar/api:${{ github.sha }} ./apps/api
 
-  build-frontend:
-    name: Build Frontend Images
+  build-marketing-web:
+    name: Build marketing-web
+    needs: changes
+    if: needs.changes.outputs.marketing-web == 'true'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        app: [marketing-web, booking-web, tenant-web, admin-web]
     steps:
       - uses: actions/checkout@v4
-
       - name: Build Docker image
-        run: docker build -t zenvikar/${{ matrix.app }}:${{ github.sha }} -f apps/${{ matrix.app }}/Dockerfile .
+        run: docker build -t zenvikar/marketing-web:${{ github.sha }} -f apps/marketing-web/Dockerfile .
+
+  build-booking-web:
+    name: Build booking-web
+    needs: changes
+    if: needs.changes.outputs.booking-web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t zenvikar/booking-web:${{ github.sha }} -f apps/booking-web/Dockerfile .
+
+  build-tenant-web:
+    name: Build tenant-web
+    needs: changes
+    if: needs.changes.outputs.tenant-web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t zenvikar/tenant-web:${{ github.sha }} -f apps/tenant-web/Dockerfile .
+
+  build-admin-web:
+    name: Build admin-web
+    needs: changes
+    if: needs.changes.outputs.admin-web == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t zenvikar/admin-web:${{ github.sha }} -f apps/admin-web/Dockerfile .

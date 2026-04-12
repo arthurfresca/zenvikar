@@ -5,8 +5,34 @@ on:
     branches: [main]
 
 jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      go: ${{ steps.filter.outputs.go }}
+      ts: ${{ steps.filter.outputs.ts }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            go:
+              - 'apps/api/**'
+            ts:
+              - 'apps/marketing-web/**'
+              - 'apps/booking-web/**'
+              - 'apps/tenant-web/**'
+              - 'apps/admin-web/**'
+              - 'packages/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'tsconfig.json'
+
   go-lint-and-test:
     name: Go Lint & Test
+    needs: changes
+    if: needs.changes.outputs.go == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -16,7 +42,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version: "1.25"
           cache-dependency-path: apps/api/go.sum
 
       - name: Go vet
@@ -30,6 +56,8 @@ jobs:
 
   ts-lint-and-test:
     name: TypeScript Lint & Typecheck
+    needs: changes
+    if: needs.changes.outputs.ts == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

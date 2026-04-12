@@ -1,8 +1,22 @@
+export type PreferredContact = "email" | "phone" | "whatsapp";
+
 export interface User {
   id: string;
   email: string;
   name: string;
+  phone: string | null;
+  preferredContact: PreferredContact;
   locale: "en" | "pt";
+}
+
+export type AuthProvider = "email" | "google" | "facebook";
+
+export interface UserAuthProvider {
+  id: string;
+  userId: string;
+  provider: AuthProvider;
+  providerId: string;
+  createdAt: string;
 }
 
 export type TenantRole =
@@ -20,4 +34,6 @@ export interface TenantMembership {
   tenantId: string;
   userId: string;
   role: TenantRole;
+  photoUrl: string | null;
+  description: string | null;
 }

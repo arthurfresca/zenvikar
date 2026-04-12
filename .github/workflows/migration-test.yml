@@ -3,6 +3,8 @@ name: Migration Test
 on:
   pull_request:
     branches: [main]
+    paths:
+      - 'apps/api/migrations/**'
 
 jobs:
   migration-test:

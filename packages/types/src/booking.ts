@@ -2,6 +2,7 @@ export interface Service {
   id: string;
   tenantId: string;
   name: string;
+  description: string | null;
   durationMinutes: number;
   bufferBefore: number;
   bufferAfter: number;
@@ -10,9 +11,17 @@ export interface Service {
   updatedAt: string;
 }
 
+export interface ServiceMember {
+  id: string;
+  serviceId: string;
+  membershipId: string;
+  priceCents: number;
+  description: string | null;
+}
+
 export interface OpeningHours {
   id: string;
-  tenantId: string;
+  serviceMemberId: string;
   dayOfWeek: number;
   openTime: string;
   closeTime: string;
@@ -21,7 +30,7 @@ export interface OpeningHours {
 
 export interface BlockedDate {
   id: string;
-  tenantId: string;
+  membershipId: string;
   date: string;
   reason: string | null;
 }
@@ -29,12 +38,12 @@ export interface BlockedDate {
 export interface Booking {
   id: string;
   tenantId: string;
-  serviceId: string;
+  serviceMemberId: string;
   customerId: string;
+  priceCents: number;
   startTime: string;
   endTime: string;
   status: "pending" | "confirmed" | "cancelled";
-  timezone: string;
   createdAt: string;
   updatedAt: string;
 }
