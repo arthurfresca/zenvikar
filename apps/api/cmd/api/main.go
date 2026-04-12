@@ -17,6 +17,7 @@ import (
 
 	"github.com/zenvikar/api/internal/platform"
 	"github.com/zenvikar/api/internal/platform/config"
+	"github.com/zenvikar/api/internal/platform/docs"
 	"github.com/zenvikar/api/internal/platform/handlers"
 	"github.com/zenvikar/api/internal/platform/logger"
 	appmiddleware "github.com/zenvikar/api/internal/platform/middleware"
@@ -92,6 +93,14 @@ func main() {
 	// Metrics endpoint
 	router.Handle("/metrics", promhttp.Handler())
 
+	// Swagger/OpenAPI docs are intentionally disabled in production.
+	if !cfg.IsProduction() {
+		router.Get("/swagger", docs.SwaggerUIHandler("/swagger/openapi.yaml"))
+		router.Get("/swagger/openapi.yaml", docs.OpenAPIHandler())
+		router.Handle("/swagger/domains/*", docs.DomainSpecsHandler())
+		log.Info("swagger docs enabled", "path", "/swagger")
+	}
+
 	// Register module routes
 	for _, m := range modules {
 		m.RegisterRoutes(router, deps)
@@ -137,4 +146,3 @@ func main() {
 
 	log.Info("server stopped")
 }
-

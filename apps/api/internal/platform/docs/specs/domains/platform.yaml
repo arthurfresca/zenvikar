@@ -1,0 +1,71 @@
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      summary: Liveness check
+      description: Returns `200 OK` when the API process is alive.
+      operationId: getLiveness
+      responses:
+        '200':
+          description: API is running
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/StatusOK'
+              example:
+                status: ok
+
+  /readyz:
+    get:
+      tags: [Health]
+      summary: Readiness check
+      description: |
+        Verifies runtime dependencies before accepting traffic.
+        Current checks:
+        - PostgreSQL connectivity
+        - Redis connectivity
+      operationId: getReadiness
+      responses:
+        '200':
+          description: Dependencies are reachable
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/StatusOK'
+              example:
+                status: ok
+        '503':
+          description: One or more dependencies are unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/StatusError'
+              examples:
+                dbUnavailable:
+                  summary: PostgreSQL not reachable
+                  value:
+                    status: error
+                    detail: "database: connection refused"
+                redisUnavailable:
+                  summary: Redis not reachable
+                  value:
+                    status: error
+                    detail: "redis: connection refused"
+
+  /metrics:
+    get:
+      tags: [Observability]
+      summary: Prometheus metrics
+      description: Exposes process and application metrics in Prometheus text format.
+      operationId: getPrometheusMetrics
+      responses:
+        '200':
+          description: Metrics payload
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                # HELP go_goroutines Number of goroutines that currently exist.
+                # TYPE go_goroutines gauge
+                go_goroutines 42

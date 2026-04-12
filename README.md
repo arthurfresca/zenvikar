@@ -25,6 +25,7 @@ Services will be available at:
 | `http://manage.zenvikar.localhost` | Tenant management portal |
 | `http://admin.zenvikar.localhost` | Platform admin |
 | `http://api.zenvikar.localhost` | Backend API |
+| `http://api.zenvikar.localhost/swagger` | API docs (non-production only) |
 | `http://localhost:3000` | Grafana (admin/admin) |
 | `http://localhost:9090` | Prometheus |
 

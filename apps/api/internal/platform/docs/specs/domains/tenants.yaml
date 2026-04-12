@@ -1,0 +1,84 @@
+paths:
+  /api/v1/tenants/resolve:
+    get:
+      tags: [Tenants]
+      summary: Resolve tenant by slug
+      description: |
+        Resolves a tenant using its slug identifier.
+
+        Behavior:
+        - Validates slug format.
+        - Attempts Redis cache lookup first.
+        - Falls back to PostgreSQL on cache miss.
+        - Rejects disabled tenants.
+      operationId: resolveTenantBySlug
+      parameters:
+        - name: slug
+          in: query
+          required: true
+          description: Tenant slug (lowercase letters, digits, hyphens; 3-63 chars).
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 63
+            example: acme
+      responses:
+        '200':
+          description: Tenant resolved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Tenant'
+              example:
+                id: "4f4fdcb6-e86c-4adf-84c3-b4fb9318c95c"
+                slug: acme
+                displayName: Acme Clinic
+                logoUrl: "https://cdn.example.com/tenants/acme/logo.png"
+                colorPrimary: "#0f172a"
+                colorSecondary: "#334155"
+                colorAccent: "#22c55e"
+                phone: "+1-555-0110"
+                email: "contact@acme.test"
+                address: "100 Main St, Toronto"
+                currency: "CAD"
+                slotIntervalMinutes: 30
+                timezone: "America/Toronto"
+                defaultLocale: "en"
+                enabled: true
+                createdAt: "2026-04-10T20:10:00Z"
+                updatedAt: "2026-04-10T20:10:00Z"
+        '400':
+          description: Bad request (missing or invalid slug)
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'
+              examples:
+                missingSlug:
+                  summary: Missing query string
+                  value:
+                    error: missing_slug
+                    message: slug query parameter is required
+                invalidSlug:
+                  summary: Invalid slug format
+                  value:
+                    error: invalid_request
+                    message: "invalid slug: slug must be between 3 and 63 characters, got 2"
+        '403':
+          description: Tenant exists but is disabled
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'
+              example:
+                error: tenant_disabled
+                message: This tenant is currently disabled
+        '404':
+          description: Tenant not found
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'
+              example:
+                error: tenant_not_found
+                message: No tenant found for this address

@@ -11,6 +11,7 @@ type Config struct {
 	RedisURL       string
 	Port           string
 	OTelEndpoint   string
+	Environment    string
 	BaseDomain     string
 	AllowedOrigins []string
 }
@@ -22,9 +23,15 @@ func Load() *Config {
 		RedisURL:       envOrDefault("REDIS_URL", "localhost:6379"),
 		Port:           envOrDefault("PORT", "8080"),
 		OTelEndpoint:   envOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),
+		Environment:    strings.ToLower(envOrDefault("APP_ENV", "development")),
 		BaseDomain:     envOrDefault("BASE_DOMAIN", "zenvikar.localhost"),
 		AllowedOrigins: parseAllowedOrigins(os.Getenv("ALLOWED_ORIGINS")),
 	}
+}
+
+// IsProduction reports whether the app is running in production mode.
+func (c *Config) IsProduction() bool {
+	return strings.EqualFold(strings.TrimSpace(c.Environment), "production")
 }
 
 // envOrDefault returns the value of the environment variable named by key,

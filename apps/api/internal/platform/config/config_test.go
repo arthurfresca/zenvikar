@@ -7,7 +7,7 @@ import (
 
 func TestLoad_Defaults(t *testing.T) {
 	// Clear any env vars that might be set
-	envVars := []string{"DATABASE_URL", "REDIS_URL", "PORT", "OTEL_EXPORTER_OTLP_ENDPOINT", "BASE_DOMAIN", "ALLOWED_ORIGINS"}
+	envVars := []string{"DATABASE_URL", "REDIS_URL", "PORT", "OTEL_EXPORTER_OTLP_ENDPOINT", "APP_ENV", "BASE_DOMAIN", "ALLOWED_ORIGINS"}
 	for _, key := range envVars {
 		t.Setenv(key, "")
 	}
@@ -26,6 +26,9 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.OTelEndpoint != "localhost:4317" {
 		t.Errorf("unexpected OTelEndpoint: %s", cfg.OTelEndpoint)
 	}
+	if cfg.Environment != "development" {
+		t.Errorf("unexpected Environment: %s", cfg.Environment)
+	}
 	if cfg.BaseDomain != "zenvikar.localhost" {
 		t.Errorf("unexpected BaseDomain: %s", cfg.BaseDomain)
 	}
@@ -39,6 +42,7 @@ func TestLoad_FromEnv(t *testing.T) {
 	t.Setenv("REDIS_URL", "redis:6380")
 	t.Setenv("PORT", "9090")
 	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "otel:4318")
+	t.Setenv("APP_ENV", "staging")
 	t.Setenv("BASE_DOMAIN", "example.com")
 	t.Setenv("ALLOWED_ORIGINS", "https://example.com, https://app.example.com")
 
@@ -55,6 +59,9 @@ func TestLoad_FromEnv(t *testing.T) {
 	}
 	if cfg.OTelEndpoint != "otel:4318" {
 		t.Errorf("unexpected OTelEndpoint: %s", cfg.OTelEndpoint)
+	}
+	if cfg.Environment != "staging" {
+		t.Errorf("unexpected Environment: %s", cfg.Environment)
 	}
 	if cfg.BaseDomain != "example.com" {
 		t.Errorf("unexpected BaseDomain: %s", cfg.BaseDomain)
@@ -109,4 +116,21 @@ func TestEnvOrDefault(t *testing.T) {
 			t.Errorf("expected fallback, got %s", got)
 		}
 	})
+}
+
+func TestConfigIsProduction(t *testing.T) {
+	cfg := &Config{Environment: "production"}
+	if !cfg.IsProduction() {
+		t.Fatalf("expected production mode")
+	}
+
+	cfg.Environment = "Production"
+	if !cfg.IsProduction() {
+		t.Fatalf("expected case-insensitive production mode")
+	}
+
+	cfg.Environment = "development"
+	if cfg.IsProduction() {
+		t.Fatalf("did not expect development mode to be production")
+	}
 }

@@ -1,0 +1,129 @@
+openapi: 3.0.3
+info:
+  title: Zenvikar API
+  version: 1.0.0
+  description: |
+    Multi-tenant API for Zenvikar platform.
+
+    Notes:
+    - This documentation reflects the currently implemented endpoints.
+    - Swagger UI is enabled only in non-production environments.
+servers:
+  - url: http://api.zenvikar.localhost
+    description: Local domain via Traefik
+  - url: http://localhost:8080
+    description: Local API server
+tags:
+  - name: Health
+    description: Operational health and readiness checks used by orchestrators.
+  - name: Observability
+    description: Runtime metrics for Prometheus scraping.
+  - name: Tenants
+    description: Tenant resolution for subdomain-driven multi-tenancy.
+paths:
+  /healthz:
+    $ref: "./domains/platform.yaml#/paths/~1healthz"
+  /readyz:
+    $ref: "./domains/platform.yaml#/paths/~1readyz"
+  /metrics:
+    $ref: "./domains/platform.yaml#/paths/~1metrics"
+  /api/v1/tenants/resolve:
+    $ref: "./domains/tenants.yaml#/paths/~1api~1v1~1tenants~1resolve"
+
+components:
+  schemas:
+    StatusOK:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+    StatusError:
+      type: object
+      required: [status, detail]
+      properties:
+        status:
+          type: string
+          example: error
+        detail:
+          type: string
+          example: "database: timeout"
+    APIError:
+      type: object
+      required: [error, message]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+    Tenant:
+      type: object
+      required:
+        - id
+        - slug
+        - displayName
+        - colorPrimary
+        - colorSecondary
+        - colorAccent
+        - currency
+        - slotIntervalMinutes
+        - timezone
+        - defaultLocale
+        - enabled
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        displayName:
+          type: string
+        logoUrl:
+          type: string
+          nullable: true
+        colorPrimary:
+          type: string
+          description: Hex color string.
+          example: "#0f172a"
+        colorSecondary:
+          type: string
+          description: Hex color string.
+          example: "#334155"
+        colorAccent:
+          type: string
+          description: Hex color string.
+          example: "#22c55e"
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        currency:
+          type: string
+          example: CAD
+        slotIntervalMinutes:
+          type: integer
+          minimum: 5
+          maximum: 240
+          example: 30
+        timezone:
+          type: string
+          example: America/Toronto
+        defaultLocale:
+          type: string
+          example: en
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
