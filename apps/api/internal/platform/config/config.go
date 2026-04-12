@@ -8,29 +8,39 @@ import (
 
 // Config holds application configuration loaded from environment variables.
 type Config struct {
-	DatabaseURL    string
-	RedisURL       string
-	Port           string
-	OTelEndpoint   string
-	Environment    string
-	JWTSecret      string
-	JWTTTLMinutes  int
-	BaseDomain     string
-	AllowedOrigins []string
+	DatabaseURL        string
+	RedisURL           string
+	Port               string
+	OTelEndpoint       string
+	Environment        string
+	JWTSecret          string
+	JWTTTLMinutes      int
+	GoogleClientID     string
+	GoogleClientSecret string
+	FacebookAppID      string
+	FacebookAppSecret  string
+	APIPublicURL       string
+	BaseDomain         string
+	AllowedOrigins     []string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
 func Load() *Config {
 	return &Config{
-		DatabaseURL:    envOrDefault("DATABASE_URL", "postgres://zenvikar:zenvikar@localhost:5432/zenvikar?sslmode=disable"),
-		RedisURL:       envOrDefault("REDIS_URL", "localhost:6379"),
-		Port:           envOrDefault("PORT", "8080"),
-		OTelEndpoint:   envOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),
-		Environment:    strings.ToLower(envOrDefault("APP_ENV", "development")),
-		JWTSecret:      envOrDefault("JWT_SECRET", "dev-only-change-me"),
-		JWTTTLMinutes:  envIntOrDefault("JWT_TTL_MINUTES", 120),
-		BaseDomain:     envOrDefault("BASE_DOMAIN", "zenvikar.localhost"),
-		AllowedOrigins: parseAllowedOrigins(os.Getenv("ALLOWED_ORIGINS")),
+		DatabaseURL:        envOrDefault("DATABASE_URL", "postgres://zenvikar:zenvikar@localhost:5432/zenvikar?sslmode=disable"),
+		RedisURL:           envOrDefault("REDIS_URL", "localhost:6379"),
+		Port:               envOrDefault("PORT", "8080"),
+		OTelEndpoint:       envOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),
+		Environment:        strings.ToLower(envOrDefault("APP_ENV", "development")),
+		JWTSecret:          envOrDefault("JWT_SECRET", "dev-only-change-me"),
+		JWTTTLMinutes:      envIntOrDefault("JWT_TTL_MINUTES", 120),
+		GoogleClientID:     envOrDefault("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret: envOrDefault("GOOGLE_CLIENT_SECRET", ""),
+		FacebookAppID:      envOrDefault("FACEBOOK_APP_ID", ""),
+		FacebookAppSecret:  envOrDefault("FACEBOOK_APP_SECRET", ""),
+		APIPublicURL:       envOrDefault("API_PUBLIC_URL", "http://api.zenvikar.localhost"),
+		BaseDomain:         envOrDefault("BASE_DOMAIN", "zenvikar.localhost"),
+		AllowedOrigins:     parseAllowedOrigins(os.Getenv("ALLOWED_ORIGINS")),
 	}
 }
 

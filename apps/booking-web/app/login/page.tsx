@@ -2,27 +2,40 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getApiPublicUrl } from "@zenvikar/config";
 import { clearAuthToken, persistAuthToken } from "@/lib/auth";
 
 export default function BookingLoginPage() {
   const router = useRouter();
+
   const [nextPath, setNextPath] = useState("/");
   const [isReauth, setIsReauth] = useState(false);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [socialEmail, setSocialEmail] = useState("");
-  const [socialName, setSocialName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setNextPath(params.get("next") || "/");
-    const reauth = params.get("reauth") === "1";
-    setIsReauth(reauth);
+    setIsReauth(params.get("reauth") === "1");
+
+    const authToken = params.get("authToken");
+    const authExpiresAt = params.get("authExpiresAt");
+    const oauthError = params.get("error");
+
+    if (authToken && authExpiresAt) {
+      persistAuthToken(authToken, authExpiresAt);
+      router.replace(params.get("next") || "/");
+      router.refresh();
+      return;
+    }
+
+    if (oauthError) {
+      setError(`Social login failed (${oauthError}).`);
+    }
   }, []);
 
   useEffect(() => {
@@ -30,6 +43,23 @@ export default function BookingLoginPage() {
       clearAuthToken();
     }
   }, [isReauth]);
+
+  const socialRedirectURL = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    const callback = new URL("/login", window.location.origin);
+    callback.searchParams.set("next", nextPath);
+    return encodeURIComponent(callback.toString());
+  }, [nextPath]);
+
+  const googleOAuthURL = useMemo(() => {
+    if (!socialRedirectURL) return "#";
+    return `${getApiPublicUrl()}/api/v1/auth/oauth/google/start?redirect=${socialRedirectURL}`;
+  }, [socialRedirectURL]);
+
+  const facebookOAuthURL = useMemo(() => {
+    if (!socialRedirectURL) return "#";
+    return `${getApiPublicUrl()}/api/v1/auth/oauth/facebook/start?redirect=${socialRedirectURL}`;
+  }, [socialRedirectURL]);
 
   async function onLoginSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,34 +80,6 @@ export default function BookingLoginPage() {
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function socialLogin(provider: "google" | "facebook") {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch(`${getApiPublicUrl()}/api/v1/auth/social`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider,
-          providerUserId: `${provider}:${socialEmail.toLowerCase()}`,
-          email: socialEmail,
-          name: socialName,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Social login failed");
-
-      persistAuthToken(data.token, data.expiresAt);
-      router.push(nextPath);
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Social login failed");
     } finally {
       setLoading(false);
     }
@@ -117,38 +119,18 @@ export default function BookingLoginPage() {
       <div className="my-6 h-px bg-gray-200" />
 
       <div className="space-y-3">
-        <input
-          type="email"
-          required
-          value={socialEmail}
-          onChange={(e) => setSocialEmail(e.target.value)}
-          placeholder="Social Email"
-          className="w-full rounded border border-gray-300 px-3 py-2"
-        />
-        <input
-          type="text"
-          required
-          value={socialName}
-          onChange={(e) => setSocialName(e.target.value)}
-          placeholder="Full Name"
-          className="w-full rounded border border-gray-300 px-3 py-2"
-        />
-        <button
-          type="button"
-          disabled={loading || !socialEmail || !socialName}
-          onClick={() => socialLogin("google")}
-          className="w-full rounded border border-gray-300 px-3 py-2 disabled:opacity-60"
+        <a
+          href={googleOAuthURL}
+          className="block w-full rounded border border-gray-300 px-3 py-2 text-center"
         >
           Continue with Google
-        </button>
-        <button
-          type="button"
-          disabled={loading || !socialEmail || !socialName}
-          onClick={() => socialLogin("facebook")}
-          className="w-full rounded border border-gray-300 px-3 py-2 disabled:opacity-60"
+        </a>
+        <a
+          href={facebookOAuthURL}
+          className="block w-full rounded border border-gray-300 px-3 py-2 text-center"
         >
           Continue with Facebook
-        </button>
+        </a>
       </div>
 
       {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}

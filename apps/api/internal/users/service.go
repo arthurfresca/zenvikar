@@ -21,6 +21,8 @@ var (
 	ErrAccessDenied = errors.New("access denied")
 	// ErrUnsupportedProvider indicates unsupported social auth provider.
 	ErrUnsupportedProvider = errors.New("unsupported provider")
+	// ErrSocialValidationFailed indicates provider token rejected/untrusted.
+	ErrSocialValidationFailed = errors.New("social identity validation failed")
 	// ErrInvalidInput indicates malformed input payload.
 	ErrInvalidInput = errors.New("invalid input")
 )
@@ -52,10 +54,10 @@ type EmailLoginInput struct {
 
 // SocialLoginInput is used after OAuth is completed client-side.
 type SocialLoginInput struct {
-	Provider       string
-	ProviderUserID string
-	Email          string
-	Name           string
+	Provider            string
+	GoogleIDToken       string
+	GoogleAccessToken   string
+	FacebookAccessToken string
 }
 
 // Service provides auth use cases for booking/admin/tenant apps.
@@ -63,14 +65,16 @@ type Service struct {
 	repo    *Repository
 	tokens  *TokenManager
 	tenants *tenants.Service
+	social  *SocialVerifier
 }
 
 // NewService creates a user auth service.
-func NewService(repo *Repository, tokens *TokenManager, tenantSvc *tenants.Service) *Service {
+func NewService(repo *Repository, tokens *TokenManager, tenantSvc *tenants.Service, social *SocialVerifier) *Service {
 	return &Service{
 		repo:    repo,
 		tokens:  tokens,
 		tenants: tenantSvc,
+		social:  social,
 	}
 }
 
@@ -148,19 +152,15 @@ func (s *Service) LoginEmail(ctx context.Context, input EmailLoginInput, audienc
 // LoginSocial signs in or creates user with external provider identity.
 // The frontend is expected to finish provider OAuth and send provider identity.
 func (s *Service) LoginSocial(ctx context.Context, input SocialLoginInput, audience string) (*AuthResult, error) {
-	provider := strings.ToLower(strings.TrimSpace(input.Provider))
-	email := normalizeEmail(input.Email)
-	name := strings.TrimSpace(input.Name)
-	providerUserID := strings.TrimSpace(input.ProviderUserID)
-
-	if provider != AuthProviderGoogle && provider != AuthProviderFacebook {
-		return nil, ErrUnsupportedProvider
-	}
-	if providerUserID == "" || email == "" || name == "" {
-		return nil, ErrInvalidInput
+	identity, err := s.social.Verify(ctx, input)
+	if err != nil {
+		if errors.Is(err, ErrUnsupportedProvider) || errors.Is(err, ErrInvalidInput) {
+			return nil, err
+		}
+		return nil, ErrSocialValidationFailed
 	}
 
-	user, err := s.repo.FindUserByProvider(ctx, provider, providerUserID)
+	user, err := s.repo.FindUserByProvider(ctx, identity.Provider, identity.ProviderUserID)
 	if err == nil {
 		return s.issueAuthResult(ctx, user, audience)
 	}
@@ -168,27 +168,27 @@ func (s *Service) LoginSocial(ctx context.Context, input SocialLoginInput, audie
 		return nil, err
 	}
 
-	user, err = s.repo.FindUserByEmail(ctx, email)
+	user, err = s.repo.FindUserByEmail(ctx, identity.Email)
 	if err != nil && !errors.Is(err, errNoRows) {
 		return nil, err
 	}
 
 	if errors.Is(err, errNoRows) {
 		user, err = s.repo.CreateUser(ctx, CreateUserParams{
-			Email:            email,
-			Name:             name,
+			Email:            identity.Email,
+			Name:             fallbackName(identity.Name, identity.Email),
 			PasswordHash:     nil,
 			Phone:            nil,
 			PreferredContact: ContactEmail,
 			Locale:           "en",
-			EmailVerified:    true,
+			EmailVerified:    identity.EmailVerified,
 		})
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if err := s.repo.CreateAuthProvider(ctx, user.ID.String(), provider, providerUserID); err != nil {
+	if err := s.repo.CreateAuthProvider(ctx, user.ID.String(), identity.Provider, identity.ProviderUserID); err != nil {
 		return nil, err
 	}
 
@@ -306,4 +306,16 @@ func normalizeLocale(locale string) string {
 		return "en"
 	}
 	return normalized
+}
+
+func fallbackName(name, email string) string {
+	trimmed := strings.TrimSpace(name)
+	if trimmed != "" {
+		return trimmed
+	}
+	localPart := strings.Split(strings.TrimSpace(email), "@")[0]
+	if localPart == "" {
+		return "User"
+	}
+	return localPart
 }

@@ -37,6 +37,14 @@ paths:
     $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1login"
   /api/v1/auth/social:
     $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1social"
+  /api/v1/auth/oauth/google/start:
+    $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1oauth~1google~1start"
+  /api/v1/auth/oauth/google/callback:
+    $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1oauth~1google~1callback"
+  /api/v1/auth/oauth/facebook/start:
+    $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1oauth~1facebook~1start"
+  /api/v1/auth/oauth/facebook/callback:
+    $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1oauth~1facebook~1callback"
   /api/v1/auth/admin/login:
     $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1admin~1login"
   /api/v1/auth/tenant/login:
@@ -177,18 +185,20 @@ components:
           type: string
     SocialLoginRequest:
       type: object
-      required: [provider, providerUserId, email, name]
+      required: [provider]
       properties:
         provider:
           type: string
           enum: [google, facebook]
-        providerUserId:
+        googleIdToken:
           type: string
-        email:
+          description: Required when provider is google unless googleAccessToken is used.
+        googleAccessToken:
           type: string
-          format: email
-        name:
+          description: Optional alternative for google provider.
+        facebookAccessToken:
           type: string
+          description: Required when provider is facebook.
     AuthResponse:
       type: object
       required: [token, tokenType, expiresAt, user]

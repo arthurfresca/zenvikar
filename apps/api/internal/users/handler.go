@@ -37,10 +37,10 @@ type loginRequest struct {
 }
 
 type socialLoginRequest struct {
-	Provider       string `json:"provider"`
-	ProviderUserID string `json:"providerUserId"`
-	Email          string `json:"email"`
-	Name           string `json:"name"`
+	Provider            string `json:"provider"`
+	GoogleIDToken       string `json:"googleIdToken"`
+	GoogleAccessToken   string `json:"googleAccessToken"`
+	FacebookAccessToken string `json:"facebookAccessToken"`
 }
 
 func (h *authHandler) signup(w http.ResponseWriter, r *http.Request) {
@@ -89,10 +89,10 @@ func (h *authHandler) socialLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := h.svc.LoginSocial(r.Context(), SocialLoginInput{
-		Provider:       req.Provider,
-		ProviderUserID: req.ProviderUserID,
-		Email:          req.Email,
-		Name:           req.Name,
+		Provider:            req.Provider,
+		GoogleIDToken:       req.GoogleIDToken,
+		GoogleAccessToken:   req.GoogleAccessToken,
+		FacebookAccessToken: req.FacebookAccessToken,
 	}, "booking-web")
 	if err != nil {
 		writeAuthError(w, err)
@@ -266,6 +266,11 @@ func writeAuthError(w http.ResponseWriter, err error) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{
 			"error":   "unsupported_provider",
 			"message": "provider must be google or facebook",
+		})
+	case errors.Is(err, ErrSocialValidationFailed):
+		writeJSON(w, http.StatusUnauthorized, map[string]string{
+			"error":   "social_validation_failed",
+			"message": "could not validate social account with provider",
 		})
 	case errors.Is(err, ErrInvalidInput):
 		writeJSON(w, http.StatusBadRequest, map[string]string{

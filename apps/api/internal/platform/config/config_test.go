@@ -7,7 +7,7 @@ import (
 
 func TestLoad_Defaults(t *testing.T) {
 	// Clear any env vars that might be set
-	envVars := []string{"DATABASE_URL", "REDIS_URL", "PORT", "OTEL_EXPORTER_OTLP_ENDPOINT", "APP_ENV", "JWT_SECRET", "JWT_TTL_MINUTES", "BASE_DOMAIN", "ALLOWED_ORIGINS"}
+	envVars := []string{"DATABASE_URL", "REDIS_URL", "PORT", "OTEL_EXPORTER_OTLP_ENDPOINT", "APP_ENV", "JWT_SECRET", "JWT_TTL_MINUTES", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "FACEBOOK_APP_ID", "FACEBOOK_APP_SECRET", "API_PUBLIC_URL", "BASE_DOMAIN", "ALLOWED_ORIGINS"}
 	for _, key := range envVars {
 		t.Setenv(key, "")
 	}
@@ -35,6 +35,21 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.JWTTTLMinutes != 120 {
 		t.Errorf("unexpected JWTTTLMinutes: %d", cfg.JWTTTLMinutes)
 	}
+	if cfg.GoogleClientID != "" {
+		t.Errorf("unexpected GoogleClientID: %s", cfg.GoogleClientID)
+	}
+	if cfg.GoogleClientSecret != "" {
+		t.Errorf("unexpected GoogleClientSecret: %s", cfg.GoogleClientSecret)
+	}
+	if cfg.FacebookAppID != "" {
+		t.Errorf("unexpected FacebookAppID: %s", cfg.FacebookAppID)
+	}
+	if cfg.FacebookAppSecret != "" {
+		t.Errorf("unexpected FacebookAppSecret: %s", cfg.FacebookAppSecret)
+	}
+	if cfg.APIPublicURL != "http://api.zenvikar.localhost" {
+		t.Errorf("unexpected APIPublicURL: %s", cfg.APIPublicURL)
+	}
 	if cfg.BaseDomain != "zenvikar.localhost" {
 		t.Errorf("unexpected BaseDomain: %s", cfg.BaseDomain)
 	}
@@ -51,6 +66,11 @@ func TestLoad_FromEnv(t *testing.T) {
 	t.Setenv("APP_ENV", "staging")
 	t.Setenv("JWT_SECRET", "super-secret")
 	t.Setenv("JWT_TTL_MINUTES", "45")
+	t.Setenv("GOOGLE_CLIENT_ID", "google-client-id")
+	t.Setenv("GOOGLE_CLIENT_SECRET", "google-client-secret")
+	t.Setenv("FACEBOOK_APP_ID", "facebook-app-id")
+	t.Setenv("FACEBOOK_APP_SECRET", "facebook-app-secret")
+	t.Setenv("API_PUBLIC_URL", "https://api.example.com")
 	t.Setenv("BASE_DOMAIN", "example.com")
 	t.Setenv("ALLOWED_ORIGINS", "https://example.com, https://app.example.com")
 
@@ -76,6 +96,21 @@ func TestLoad_FromEnv(t *testing.T) {
 	}
 	if cfg.JWTTTLMinutes != 45 {
 		t.Errorf("unexpected JWTTTLMinutes: %d", cfg.JWTTTLMinutes)
+	}
+	if cfg.GoogleClientID != "google-client-id" {
+		t.Errorf("unexpected GoogleClientID: %s", cfg.GoogleClientID)
+	}
+	if cfg.GoogleClientSecret != "google-client-secret" {
+		t.Errorf("unexpected GoogleClientSecret: %s", cfg.GoogleClientSecret)
+	}
+	if cfg.FacebookAppID != "facebook-app-id" {
+		t.Errorf("unexpected FacebookAppID: %s", cfg.FacebookAppID)
+	}
+	if cfg.FacebookAppSecret != "facebook-app-secret" {
+		t.Errorf("unexpected FacebookAppSecret: %s", cfg.FacebookAppSecret)
+	}
+	if cfg.APIPublicURL != "https://api.example.com" {
+		t.Errorf("unexpected APIPublicURL: %s", cfg.APIPublicURL)
 	}
 	if cfg.BaseDomain != "example.com" {
 		t.Errorf("unexpected BaseDomain: %s", cfg.BaseDomain)

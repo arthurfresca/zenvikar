@@ -29,6 +29,11 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=otel-collector:4317
       - BASE_DOMAIN=zenvikar.localhost
       - PORT=8080
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - FACEBOOK_APP_ID=${FACEBOOK_APP_ID}
+      - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET}
+      - API_PUBLIC_URL=${API_PUBLIC_URL}
     depends_on:
       - postgres
       - redis
