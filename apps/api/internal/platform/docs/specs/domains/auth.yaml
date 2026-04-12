@@ -1,0 +1,206 @@
+paths:
+  /api/v1/auth/signup:
+    post:
+      tags: [Auth]
+      summary: Sign up with email/password (booking web)
+      operationId: authSignup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/SignupRequest'
+      responses:
+        '201':
+          description: User created and signed in
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email/password (booking web)
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'
+
+  /api/v1/auth/social:
+    post:
+      tags: [Auth]
+      summary: Login/signup with social provider (google/facebook)
+      description: |
+        Expects provider identity from client-side OAuth flow.
+        For social logins, email verification is considered true.
+      operationId: authSocialLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/SocialLoginRequest'
+      responses:
+        '200':
+          description: Authenticated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid request/provider
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'
+
+  /api/v1/auth/admin/login:
+    post:
+      tags: [Auth]
+      summary: Login for admin-web (platform admins only)
+      operationId: authAdminLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated as platform admin
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'
+        '403':
+          description: User is not in platform_admins
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'
+
+  /api/v1/auth/tenant/login:
+    post:
+      tags: [Auth]
+      summary: Login for tenant-web (membership in current tenant required)
+      description: |
+        Tenant context is resolved from:
+        1. `X-Tenant-ID` header, or
+        2. Host subdomain (for example `acme.zenvikar.localhost`).
+        If tenant context is not provided, login succeeds only if user has at
+        least one tenant membership.
+      operationId: authTenantLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated and member of current tenant
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'
+        '403':
+          description: User is not a member of this tenant
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'
+
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Decode current bearer token
+      operationId: authMe
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token decoded
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/AuthMeResponse'
+        '401':
+          description: Missing/invalid/expired token
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'
+
+  /api/v1/auth/tenants:
+    get:
+      tags: [Auth]
+      summary: List tenants accessible by authenticated user
+      operationId: authTenants
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Accessible tenant list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tenants]
+                properties:
+                  tenants:
+                    type: array
+                    items:
+                      $ref: '../openapi.yaml#/components/schemas/TenantAccess'
+        '401':
+          description: Missing/invalid/expired token
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/APIError'

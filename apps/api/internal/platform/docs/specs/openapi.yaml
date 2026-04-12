@@ -14,6 +14,8 @@ servers:
   - url: http://localhost:8080
     description: Local API server
 tags:
+  - name: Auth
+    description: Authentication and session token endpoints for booking, tenant, and admin apps.
   - name: Health
     description: Operational health and readiness checks used by orchestrators.
   - name: Observability
@@ -29,8 +31,27 @@ paths:
     $ref: "./domains/platform.yaml#/paths/~1metrics"
   /api/v1/tenants/resolve:
     $ref: "./domains/tenants.yaml#/paths/~1api~1v1~1tenants~1resolve"
+  /api/v1/auth/signup:
+    $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1signup"
+  /api/v1/auth/login:
+    $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1login"
+  /api/v1/auth/social:
+    $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1social"
+  /api/v1/auth/admin/login:
+    $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1admin~1login"
+  /api/v1/auth/tenant/login:
+    $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1tenant~1login"
+  /api/v1/auth/me:
+    $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1me"
+  /api/v1/auth/tenants:
+    $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1tenants"
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     StatusOK:
       type: object
@@ -127,3 +148,136 @@ components:
         updatedAt:
           type: string
           format: date-time
+    SignupRequest:
+      type: object
+      required: [email, name, password]
+      properties:
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        password:
+          type: string
+          minLength: 8
+        phone:
+          type: string
+          nullable: true
+        locale:
+          type: string
+          enum: [en, pt]
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    SocialLoginRequest:
+      type: object
+      required: [provider, providerUserId, email, name]
+      properties:
+        provider:
+          type: string
+          enum: [google, facebook]
+        providerUserId:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+    AuthResponse:
+      type: object
+      required: [token, tokenType, expiresAt, user]
+      properties:
+        token:
+          type: string
+        tokenType:
+          type: string
+          example: Bearer
+        expiresAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/TenantAuthUser'
+        platformRole:
+          type: string
+          nullable: true
+          example: admin
+        tenantRoles:
+          type: object
+          additionalProperties:
+            type: string
+          description: Map of tenant_id -> role.
+    TenantAuthUser:
+      type: object
+      required: [id, email, name, preferredContact, locale, emailVerified, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        preferredContact:
+          type: string
+          enum: [email, phone, whatsapp]
+        locale:
+          type: string
+          enum: [en, pt]
+        emailVerified:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AuthMeResponse:
+      type: object
+      required: [userId, email, name, audience, issuedAt, expiresAt]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        audience:
+          type: string
+          example: booking-web
+        platformRole:
+          type: string
+          nullable: true
+        tenantRoles:
+          type: object
+          additionalProperties:
+            type: string
+        issuedAt:
+          type: integer
+          format: int64
+        expiresAt:
+          type: integer
+          format: int64
+    TenantAccess:
+      type: object
+      required: [tenantId, tenantSlug, tenantName, role]
+      properties:
+        tenantId:
+          type: string
+          format: uuid
+        tenantSlug:
+          type: string
+        tenantName:
+          type: string
+        role:
+          type: string

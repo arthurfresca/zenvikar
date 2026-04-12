@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -12,6 +13,8 @@ type Config struct {
 	Port           string
 	OTelEndpoint   string
 	Environment    string
+	JWTSecret      string
+	JWTTTLMinutes  int
 	BaseDomain     string
 	AllowedOrigins []string
 }
@@ -24,6 +27,8 @@ func Load() *Config {
 		Port:           envOrDefault("PORT", "8080"),
 		OTelEndpoint:   envOrDefault("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),
 		Environment:    strings.ToLower(envOrDefault("APP_ENV", "development")),
+		JWTSecret:      envOrDefault("JWT_SECRET", "dev-only-change-me"),
+		JWTTTLMinutes:  envIntOrDefault("JWT_TTL_MINUTES", 120),
 		BaseDomain:     envOrDefault("BASE_DOMAIN", "zenvikar.localhost"),
 		AllowedOrigins: parseAllowedOrigins(os.Getenv("ALLOWED_ORIGINS")),
 	}
@@ -41,6 +46,20 @@ func envOrDefault(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// envIntOrDefault returns the integer value of the environment variable named
+// by key, or fallback when parsing fails or the variable is not set.
+func envIntOrDefault(key string, fallback int) int {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return fallback
+	}
+	v, err := strconv.Atoi(raw)
+	if err != nil || v <= 0 {
+		return fallback
+	}
+	return v
 }
 
 // parseAllowedOrigins splits a comma-separated string of origins into a slice.

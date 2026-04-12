@@ -7,7 +7,7 @@ import (
 
 func TestLoad_Defaults(t *testing.T) {
 	// Clear any env vars that might be set
-	envVars := []string{"DATABASE_URL", "REDIS_URL", "PORT", "OTEL_EXPORTER_OTLP_ENDPOINT", "APP_ENV", "BASE_DOMAIN", "ALLOWED_ORIGINS"}
+	envVars := []string{"DATABASE_URL", "REDIS_URL", "PORT", "OTEL_EXPORTER_OTLP_ENDPOINT", "APP_ENV", "JWT_SECRET", "JWT_TTL_MINUTES", "BASE_DOMAIN", "ALLOWED_ORIGINS"}
 	for _, key := range envVars {
 		t.Setenv(key, "")
 	}
@@ -29,6 +29,12 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.Environment != "development" {
 		t.Errorf("unexpected Environment: %s", cfg.Environment)
 	}
+	if cfg.JWTSecret != "dev-only-change-me" {
+		t.Errorf("unexpected JWTSecret: %s", cfg.JWTSecret)
+	}
+	if cfg.JWTTTLMinutes != 120 {
+		t.Errorf("unexpected JWTTTLMinutes: %d", cfg.JWTTTLMinutes)
+	}
 	if cfg.BaseDomain != "zenvikar.localhost" {
 		t.Errorf("unexpected BaseDomain: %s", cfg.BaseDomain)
 	}
@@ -43,6 +49,8 @@ func TestLoad_FromEnv(t *testing.T) {
 	t.Setenv("PORT", "9090")
 	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "otel:4318")
 	t.Setenv("APP_ENV", "staging")
+	t.Setenv("JWT_SECRET", "super-secret")
+	t.Setenv("JWT_TTL_MINUTES", "45")
 	t.Setenv("BASE_DOMAIN", "example.com")
 	t.Setenv("ALLOWED_ORIGINS", "https://example.com, https://app.example.com")
 
@@ -62,6 +70,12 @@ func TestLoad_FromEnv(t *testing.T) {
 	}
 	if cfg.Environment != "staging" {
 		t.Errorf("unexpected Environment: %s", cfg.Environment)
+	}
+	if cfg.JWTSecret != "super-secret" {
+		t.Errorf("unexpected JWTSecret: %s", cfg.JWTSecret)
+	}
+	if cfg.JWTTTLMinutes != 45 {
+		t.Errorf("unexpected JWTTTLMinutes: %d", cfg.JWTTTLMinutes)
 	}
 	if cfg.BaseDomain != "example.com" {
 		t.Errorf("unexpected BaseDomain: %s", cfg.BaseDomain)
@@ -132,5 +146,27 @@ func TestConfigIsProduction(t *testing.T) {
 	cfg.Environment = "development"
 	if cfg.IsProduction() {
 		t.Fatalf("did not expect development mode to be production")
+	}
+}
+
+func TestEnvIntOrDefault(t *testing.T) {
+	t.Setenv("JWT_TTL_MINUTES", "60")
+	if got := envIntOrDefault("JWT_TTL_MINUTES", 120); got != 60 {
+		t.Fatalf("expected 60, got %d", got)
+	}
+
+	t.Setenv("JWT_TTL_MINUTES", "")
+	if got := envIntOrDefault("JWT_TTL_MINUTES", 120); got != 120 {
+		t.Fatalf("expected fallback 120, got %d", got)
+	}
+
+	t.Setenv("JWT_TTL_MINUTES", "invalid")
+	if got := envIntOrDefault("JWT_TTL_MINUTES", 120); got != 120 {
+		t.Fatalf("expected fallback for invalid value, got %d", got)
+	}
+
+	t.Setenv("JWT_TTL_MINUTES", "-10")
+	if got := envIntOrDefault("JWT_TTL_MINUTES", 120); got != 120 {
+		t.Fatalf("expected fallback for non-positive value, got %d", got)
 	}
 }

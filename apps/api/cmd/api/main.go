@@ -23,6 +23,7 @@ import (
 	appmiddleware "github.com/zenvikar/api/internal/platform/middleware"
 	appotel "github.com/zenvikar/api/internal/platform/otel"
 	"github.com/zenvikar/api/internal/tenants"
+	"github.com/zenvikar/api/internal/users"
 	"github.com/zenvikar/api/migrations"
 )
 
@@ -75,6 +76,7 @@ func main() {
 	// Register modules
 	modules := []platform.Module{
 		tenants.New(),
+		users.New(),
 	}
 
 	// Set up router
