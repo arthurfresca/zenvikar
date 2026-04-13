@@ -100,6 +100,13 @@ paths:
             type: string
             format: uri
           description: Frontend URL that receives `authToken`/`authExpiresAt` on success.
+        - in: query
+          name: audience
+          required: false
+          schema:
+            type: string
+            enum: [booking-web, tenant-web]
+          description: JWT audience; defaults to booking-web.
       responses:
         '302':
           description: Redirect to Google OAuth consent screen
@@ -141,6 +148,13 @@ paths:
             type: string
             format: uri
           description: Frontend URL that receives `authToken`/`authExpiresAt` on success.
+        - in: query
+          name: audience
+          required: false
+          schema:
+            type: string
+            enum: [booking-web, tenant-web]
+          description: JWT audience; defaults to booking-web.
       responses:
         '302':
           description: Redirect to Facebook OAuth consent screen

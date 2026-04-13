@@ -44,22 +44,14 @@ export default function BookingLoginPage() {
     }
   }, [isReauth]);
 
-  const socialRedirectURL = useMemo(() => {
-    if (typeof window === "undefined") return "";
-    const callback = new URL("/login", window.location.origin);
-    callback.searchParams.set("next", nextPath);
-    return encodeURIComponent(callback.toString());
-  }, [nextPath]);
-
-  const googleOAuthURL = useMemo(() => {
-    if (!socialRedirectURL) return "#";
-    return `${getApiPublicUrl()}/api/v1/auth/oauth/google/start?redirect=${socialRedirectURL}`;
-  }, [socialRedirectURL]);
-
-  const facebookOAuthURL = useMemo(() => {
-    if (!socialRedirectURL) return "#";
-    return `${getApiPublicUrl()}/api/v1/auth/oauth/facebook/start?redirect=${socialRedirectURL}`;
-  }, [socialRedirectURL]);
+  const googleOAuthURL = useMemo(
+    () => `${getApiPublicUrl()}/api/v1/auth/oauth/google/start`,
+    []
+  );
+  const facebookOAuthURL = useMemo(
+    () => `${getApiPublicUrl()}/api/v1/auth/oauth/facebook/start`,
+    []
+  );
 
   async function onLoginSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

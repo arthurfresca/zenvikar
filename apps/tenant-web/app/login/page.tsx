@@ -19,6 +19,19 @@ export default function TenantLoginPage() {
     setNextPath(params.get("next") || "/");
     const reauth = params.get("reauth") === "1";
     setIsReauth(reauth);
+
+    const authToken = params.get("authToken");
+    const authExpiresAt = params.get("authExpiresAt");
+    const oauthError = params.get("error");
+    if (authToken && authExpiresAt) {
+      persistTenantToken(authToken, authExpiresAt);
+      router.replace(params.get("next") || "/");
+      router.refresh();
+      return;
+    }
+    if (oauthError) {
+      setError(`Social login failed (${oauthError}).`);
+    }
   }, []);
 
   useEffect(() => {
@@ -83,6 +96,23 @@ export default function TenantLoginPage() {
           {loading ? "Signing In..." : "Sign In"}
         </button>
       </form>
+
+      <div className="my-6 h-px bg-gray-200" />
+
+      <div className="space-y-3">
+        <a
+          href={`${getApiPublicUrl()}/api/v1/auth/oauth/google/start?audience=tenant-web`}
+          className="block w-full rounded border border-gray-300 px-3 py-2 text-center"
+        >
+          Continue with Google
+        </a>
+        <a
+          href={`${getApiPublicUrl()}/api/v1/auth/oauth/facebook/start?audience=tenant-web`}
+          className="block w-full rounded border border-gray-300 px-3 py-2 text-center"
+        >
+          Continue with Facebook
+        </a>
+      </div>
 
       {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
     </main>
