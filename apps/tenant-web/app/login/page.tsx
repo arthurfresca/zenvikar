@@ -9,6 +9,7 @@ export default function TenantLoginPage() {
   const router = useRouter();
   const [nextPath, setNextPath] = useState("/");
   const [isReauth, setIsReauth] = useState(false);
+  const [origin, setOrigin] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,6 +18,7 @@ export default function TenantLoginPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setNextPath(params.get("next") || "/");
+    setOrigin(window.location.origin);
     const reauth = params.get("reauth") === "1";
     setIsReauth(reauth);
 
@@ -51,8 +53,9 @@ export default function TenantLoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
+      const data = await readResponseBody(res);
       if (!res.ok) throw new Error(data?.message || "Login failed");
+      if (!data.token || !data.expiresAt) throw new Error("Login response was missing auth token");
 
       persistTenantToken(data.token, data.expiresAt);
       router.push(nextPath || "/");
@@ -101,13 +104,13 @@ export default function TenantLoginPage() {
 
       <div className="space-y-3">
         <a
-          href={`${getApiPublicUrl()}/api/v1/auth/oauth/google/start?audience=tenant-web`}
+          href={buildOAuthURL("google", origin, nextPath)}
           className="block w-full rounded border border-gray-300 px-3 py-2 text-center"
         >
           Continue with Google
         </a>
         <a
-          href={`${getApiPublicUrl()}/api/v1/auth/oauth/facebook/start?audience=tenant-web`}
+          href={buildOAuthURL("facebook", origin, nextPath)}
           className="block w-full rounded border border-gray-300 px-3 py-2 text-center"
         >
           Continue with Facebook
@@ -117,4 +120,31 @@ export default function TenantLoginPage() {
       {error ? <p className="mt-4 text-sm text-red-600">{error}</p> : null}
     </main>
   );
+}
+
+function buildOAuthURL(provider: "google" | "facebook", origin: string, nextPath: string) {
+  const url = new URL(`/api/v1/auth/oauth/${provider}/start`, getApiPublicUrl());
+  url.searchParams.set("audience", "tenant-web");
+  if (origin) {
+    const redirect = new URL("/login", origin);
+    const normalizedNext = nextPath || "/";
+    if (normalizedNext !== "/") {
+      redirect.searchParams.set("next", normalizedNext);
+    }
+    url.searchParams.set("redirect", redirect.toString());
+  }
+  return url.toString();
+}
+
+async function readResponseBody(res: Response): Promise<{ message?: string; token?: string; expiresAt?: string }> {
+  const text = await res.text();
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: `${res.status} ${res.statusText}: ${text}` };
+  }
 }

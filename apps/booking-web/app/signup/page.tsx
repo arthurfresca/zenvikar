@@ -27,8 +27,9 @@ export default function BookingSignupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, name, password, locale }),
       });
-      const data = await res.json();
+      const data = await readResponseBody(res);
       if (!res.ok) throw new Error(data?.message || "Signup failed");
+      if (!data.token || !data.expiresAt) throw new Error("Signup response was missing auth token");
 
       persistAuthToken(data.token, data.expiresAt);
       router.push("/");
@@ -98,4 +99,17 @@ export default function BookingSignupPage() {
       </p>
     </main>
   );
+}
+
+async function readResponseBody(res: Response): Promise<{ message?: string; token?: string; expiresAt?: string }> {
+  const text = await res.text();
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: `${res.status} ${res.statusText}: ${text}` };
+  }
 }

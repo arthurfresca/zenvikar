@@ -24,11 +24,9 @@ func CORS(allowedOrigins []string) func(next http.Handler) http.Handler {
 
 			if allowAll {
 				w.Header().Set("Access-Control-Allow-Origin", "*")
-			} else if origin != "" {
-				if _, ok := originSet[strings.ToLower(origin)]; ok {
-					w.Header().Set("Access-Control-Allow-Origin", origin)
-					w.Header().Set("Vary", "Origin")
-				}
+			} else if isAllowedOrigin(origin, originSet) {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+				w.Header().Set("Vary", "Origin")
 			}
 
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
@@ -44,4 +42,35 @@ func CORS(allowedOrigins []string) func(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+func isAllowedOrigin(origin string, allowed map[string]struct{}) bool {
+	normalized := strings.ToLower(strings.TrimSpace(origin))
+	if normalized == "" {
+		return false
+	}
+	if _, ok := allowed[normalized]; ok {
+		return true
+	}
+
+	for pattern := range allowed {
+		if strings.Contains(pattern, "://*.") && matchesWildcardOrigin(normalized, pattern) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func matchesWildcardOrigin(origin, pattern string) bool {
+	originScheme, originHost, ok := strings.Cut(origin, "://")
+	if !ok {
+		return false
+	}
+	patternScheme, patternHost, ok := strings.Cut(pattern, "://*.")
+	if !ok || originScheme != patternScheme {
+		return false
+	}
+
+	return strings.HasSuffix(originHost, "."+patternHost) && originHost != patternHost
 }

@@ -38,7 +38,7 @@ func Load() *Config {
 		GoogleClientSecret: envOrDefault("GOOGLE_CLIENT_SECRET", ""),
 		FacebookAppID:      envOrDefault("FACEBOOK_APP_ID", ""),
 		FacebookAppSecret:  envOrDefault("FACEBOOK_APP_SECRET", ""),
-		APIPublicURL:       envOrDefault("API_PUBLIC_URL", "http://api.zenvikar.localhost"),
+		APIPublicURL:       envOrDefault("API_PUBLIC_URL", "http://localhost:8080"),
 		BaseDomain:         envOrDefault("BASE_DOMAIN", "zenvikar.localhost"),
 		AllowedOrigins:     parseAllowedOrigins(os.Getenv("ALLOWED_ORIGINS")),
 	}

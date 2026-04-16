@@ -47,7 +47,7 @@ func TestLoad_Defaults(t *testing.T) {
 	if cfg.FacebookAppSecret != "" {
 		t.Errorf("unexpected FacebookAppSecret: %s", cfg.FacebookAppSecret)
 	}
-	if cfg.APIPublicURL != "http://api.zenvikar.localhost" {
+	if cfg.APIPublicURL != "http://localhost:8080" {
 		t.Errorf("unexpected APIPublicURL: %s", cfg.APIPublicURL)
 	}
 	if cfg.BaseDomain != "zenvikar.localhost" {

@@ -9,7 +9,7 @@ export function getApiInternalUrl(): string {
 
 /** Returns the base URL for the public API (client-side calls). */
 export function getApiPublicUrl(): string {
-  return process.env.NEXT_PUBLIC_API_URL || "http://api.zenvikar.localhost";
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
 }
 
 /** Returns the platform base domain used for tenant subdomain resolution. */

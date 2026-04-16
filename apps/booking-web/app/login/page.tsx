@@ -11,6 +11,7 @@ export default function BookingLoginPage() {
 
   const [nextPath, setNextPath] = useState("/");
   const [isReauth, setIsReauth] = useState(false);
+  const [origin, setOrigin] = useState("");
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,6 +22,7 @@ export default function BookingLoginPage() {
     const params = new URLSearchParams(window.location.search);
     setNextPath(params.get("next") || "/");
     setIsReauth(params.get("reauth") === "1");
+    setOrigin(window.location.origin);
 
     const authToken = params.get("authToken");
     const authExpiresAt = params.get("authExpiresAt");
@@ -45,12 +47,12 @@ export default function BookingLoginPage() {
   }, [isReauth]);
 
   const googleOAuthURL = useMemo(
-    () => `${getApiPublicUrl()}/api/v1/auth/oauth/google/start`,
-    []
+    () => buildOAuthURL("google", origin, nextPath),
+    [origin, nextPath]
   );
   const facebookOAuthURL = useMemo(
-    () => `${getApiPublicUrl()}/api/v1/auth/oauth/facebook/start`,
-    []
+    () => buildOAuthURL("facebook", origin, nextPath),
+    [origin, nextPath]
   );
 
   async function onLoginSubmit(event: FormEvent<HTMLFormElement>) {
@@ -64,8 +66,9 @@ export default function BookingLoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data = await res.json();
+      const data = await readResponseBody(res);
       if (!res.ok) throw new Error(data?.message || "Login failed");
+      if (!data.token || !data.expiresAt) throw new Error("Login response was missing auth token");
 
       persistAuthToken(data.token, data.expiresAt);
       router.push(nextPath);
@@ -135,4 +138,30 @@ export default function BookingLoginPage() {
       </p>
     </main>
   );
+}
+
+function buildOAuthURL(provider: "google" | "facebook", origin: string, nextPath: string) {
+  const url = new URL(`/api/v1/auth/oauth/${provider}/start`, getApiPublicUrl());
+  if (origin) {
+    const redirect = new URL("/login", origin);
+    const normalizedNext = nextPath || "/";
+    if (normalizedNext !== "/") {
+      redirect.searchParams.set("next", normalizedNext);
+    }
+    url.searchParams.set("redirect", redirect.toString());
+  }
+  return url.toString();
+}
+
+async function readResponseBody(res: Response): Promise<{ message?: string; token?: string; expiresAt?: string }> {
+  const text = await res.text();
+  if (!text) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: `${res.status} ${res.statusText}: ${text}` };
+  }
 }

@@ -57,6 +57,38 @@ func TestCORS_UnknownOriginNotAllowed(t *testing.T) {
 	}
 }
 
+func TestCORS_WildcardSubdomainAllowed(t *testing.T) {
+	handler := CORS([]string{"http://*.zenvikar.localhost"})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", nil)
+	req.Header.Set("Origin", "http://acme.zenvikar.localhost")
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if got := rr.Header().Get("Access-Control-Allow-Origin"); got != "http://acme.zenvikar.localhost" {
+		t.Errorf("expected wildcard tenant origin to be allowed, got %q", got)
+	}
+}
+
+func TestCORS_WildcardSubdomainDoesNotAllowBaseDomain(t *testing.T) {
+	handler := CORS([]string{"http://*.zenvikar.localhost"})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", nil)
+	req.Header.Set("Origin", "http://zenvikar.localhost")
+	rr := httptest.NewRecorder()
+
+	handler.ServeHTTP(rr, req)
+
+	if got := rr.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Errorf("expected wildcard not to allow base domain, got %q", got)
+	}
+}
+
 func TestCORS_PreflightReturns204(t *testing.T) {
 	called := false
 	handler := CORS([]string{"*"})(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

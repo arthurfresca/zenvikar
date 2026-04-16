@@ -35,6 +35,30 @@ Seed the database with sample data:
 make seed
 ```
 
+## Google OAuth Setup
+
+The API owns the OAuth callback. In Google Cloud Console, create an OAuth 2.0
+Web application client and add this authorized redirect URI for local Docker:
+
+```text
+http://localhost:8081/api/v1/auth/oauth/google/callback
+```
+
+Then set these values in `.env` before rebuilding/restarting the API:
+
+```env
+GOOGLE_CLIENT_ID=your-web-client-id
+GOOGLE_CLIENT_SECRET=your-web-client-secret
+API_PUBLIC_URL=http://localhost:8081
+BASE_DOMAIN=zenvikar.localhost
+```
+
+If Google rejects the request with `redirect_uri_mismatch`, the value above
+does not exactly match the callback generated from `API_PUBLIC_URL`. For local
+development, use `localhost` for the Google callback; `*.zenvikar.localhost`
+is still used by the frontend apps, but Google's OAuth redirect URI rules only
+exempt `localhost` from the HTTPS requirement.
+
 ## Architecture
 
 See [design document](.kiro/specs/zenvikar-platform-foundation/design.md) for the full architecture diagram and sequence flows.
