@@ -1,0 +1,321 @@
+paths:
+  /api/v1/tenants/{tenantSlug}/bookings:
+    parameters:
+      - in: path
+        name: tenantSlug
+        required: true
+        schema:
+          type: string
+    post:
+      tags: [Booking Portal]
+      summary: Create a booking as the signed-in customer
+      description: |
+        Creates a booking for the authenticated user on a tenant booking page.
+
+        The customer is always taken from the bearer token, never from the request body.
+        The API validates the target tenant, the service-member relationship, opening hours, blocked dates,
+        existing bookings, and the tenant slot interval before inserting a pending booking.
+      operationId: createBooking
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantSlug
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/CreateBookingRequest'
+            example:
+              serviceMemberId: "8bb4c6c3-9b3a-4c52-9682-34b7e6c35a90"
+              startTime: "2026-05-20T14:00:00Z"
+      responses:
+        '201':
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Booking'
+              example:
+                id: "8e290f2b-7d27-4474-a4a1-a27cc00b5a51"
+                tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                serviceMemberId: "8bb4c6c3-9b3a-4c52-9682-34b7e6c35a90"
+                customerId: "a124b82f-b2cf-4b73-b2c5-7a63c8c0b1db"
+                priceCents: 4500
+                startTime: "2026-05-20T14:00:00Z"
+                endTime: "2026-05-20T14:45:00Z"
+                status: pending
+                createdAt: "2026-05-18T15:00:00Z"
+                updatedAt: "2026-05-18T15:00:00Z"
+  /api/v1/me/bookings:
+    get:
+      tags: [Booking Portal]
+      summary: List my bookings
+      description: Returns only the bookings owned by the authenticated customer.
+      operationId: listMyBookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Customer bookings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookings:
+                    type: array
+                    items:
+                      $ref: '../openapi.yaml#/components/schemas/Booking'
+              example:
+                bookings:
+                  - id: "8e290f2b-7d27-4474-a4a1-a27cc00b5a51"
+                    tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                    serviceMemberId: "8bb4c6c3-9b3a-4c52-9682-34b7e6c35a90"
+                    customerId: "a124b82f-b2cf-4b73-b2c5-7a63c8c0b1db"
+                    priceCents: 4500
+                    startTime: "2026-05-20T14:00:00Z"
+                    endTime: "2026-05-20T14:45:00Z"
+                    status: pending
+                    createdAt: "2026-05-18T15:00:00Z"
+                    updatedAt: "2026-05-18T15:00:00Z"
+  /api/v1/me/bookings/{bookingId}:
+    parameters:
+      - in: path
+        name: bookingId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Booking Portal]
+      summary: Get one of my bookings
+      description: Loads one booking if and only if it belongs to the authenticated customer.
+      operationId: getMyBooking
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Owned booking
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Booking'
+              example:
+                id: "8e290f2b-7d27-4474-a4a1-a27cc00b5a51"
+                tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                serviceMemberId: "8bb4c6c3-9b3a-4c52-9682-34b7e6c35a90"
+                customerId: "a124b82f-b2cf-4b73-b2c5-7a63c8c0b1db"
+                priceCents: 4500
+                startTime: "2026-05-20T14:00:00Z"
+                endTime: "2026-05-20T14:45:00Z"
+                status: pending
+                createdAt: "2026-05-18T15:00:00Z"
+                updatedAt: "2026-05-18T15:00:00Z"
+  /api/v1/me/bookings/{bookingId}/cancel:
+    parameters:
+      - in: path
+        name: bookingId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Booking Portal]
+      summary: Cancel one of my bookings
+      description: Cancels a booking when it belongs to the authenticated customer.
+      operationId: cancelMyBooking
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Cancelled booking
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Booking'
+              example:
+                id: "8e290f2b-7d27-4474-a4a1-a27cc00b5a51"
+                tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                serviceMemberId: "8bb4c6c3-9b3a-4c52-9682-34b7e6c35a90"
+                customerId: "a124b82f-b2cf-4b73-b2c5-7a63c8c0b1db"
+                priceCents: 4500
+                startTime: "2026-05-20T14:00:00Z"
+                endTime: "2026-05-20T14:45:00Z"
+                status: cancelled
+                createdAt: "2026-05-18T15:00:00Z"
+                updatedAt: "2026-05-18T16:10:00Z"
+  /api/v1/tenant/tenants/{tenantId}/bookings:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Tenant Bookings]
+      summary: List bookings in tenant scope
+      description: Lists bookings for a tenant with optional RFC3339 `from` and `to` range filters. Requires `bookings:read`.
+      operationId: listTenantBookings
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Tenant bookings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookings:
+                    type: array
+                    items:
+                      $ref: '../openapi.yaml#/components/schemas/Booking'
+              example:
+                bookings:
+                  - id: "8e290f2b-7d27-4474-a4a1-a27cc00b5a51"
+                    tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                    serviceMemberId: "8bb4c6c3-9b3a-4c52-9682-34b7e6c35a90"
+                    customerId: "a124b82f-b2cf-4b73-b2c5-7a63c8c0b1db"
+                    priceCents: 4500
+                    startTime: "2026-05-20T14:00:00Z"
+                    endTime: "2026-05-20T14:45:00Z"
+                    status: confirmed
+                    createdAt: "2026-05-18T15:00:00Z"
+                    updatedAt: "2026-05-18T15:20:00Z"
+  /api/v1/tenant/tenants/{tenantId}/bookings/{bookingId}:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: bookingId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Tenant Bookings]
+      summary: Get one booking in tenant scope
+      description: Loads one booking for tenant operations. Requires `bookings:read`.
+      operationId: getTenantBooking
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Booking'
+              example:
+                id: "8e290f2b-7d27-4474-a4a1-a27cc00b5a51"
+                tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                serviceMemberId: "8bb4c6c3-9b3a-4c52-9682-34b7e6c35a90"
+                customerId: "a124b82f-b2cf-4b73-b2c5-7a63c8c0b1db"
+                priceCents: 4500
+                startTime: "2026-05-20T14:00:00Z"
+                endTime: "2026-05-20T14:45:00Z"
+                status: confirmed
+                createdAt: "2026-05-18T15:00:00Z"
+                updatedAt: "2026-05-18T15:20:00Z"
+    patch:
+      tags: [Tenant Bookings]
+      summary: Update booking status in tenant scope
+      description: Updates the booking status to `pending`, `confirmed`, or `cancelled`. Requires `bookings:update`.
+      operationId: updateTenantBooking
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/UpdateBookingStatusRequest'
+            example:
+              status: confirmed
+      responses:
+        '200':
+          description: Updated booking
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Booking'
+              example:
+                id: "8e290f2b-7d27-4474-a4a1-a27cc00b5a51"
+                tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                serviceMemberId: "8bb4c6c3-9b3a-4c52-9682-34b7e6c35a90"
+                customerId: "a124b82f-b2cf-4b73-b2c5-7a63c8c0b1db"
+                priceCents: 4500
+                startTime: "2026-05-20T14:00:00Z"
+                endTime: "2026-05-20T14:45:00Z"
+                status: confirmed
+                createdAt: "2026-05-18T15:00:00Z"
+                updatedAt: "2026-05-18T15:20:00Z"

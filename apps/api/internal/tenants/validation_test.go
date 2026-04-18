@@ -6,11 +6,11 @@ import (
 
 func TestValidateTenantSlug_Valid(t *testing.T) {
 	valid := []string{
-		"abc",                    // minimum length
-		"a1b",                    // mixed alphanumeric
-		"my-tenant",              // typical slug
-		"tenant-123",             // trailing digits
-		"a-b-c",                  // multiple hyphens (non-consecutive)
+		"abc",        // minimum length
+		"a1b",        // mixed alphanumeric
+		"my-tenant",  // typical slug
+		"tenant-123", // trailing digits
+		"a-b-c",      // multiple hyphens (non-consecutive)
 		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", // 63 chars
 	}
 	for _, slug := range valid {
@@ -37,9 +37,9 @@ func TestValidateTenantSlug_TooLong(t *testing.T) {
 
 func TestValidateTenantSlug_InvalidPattern(t *testing.T) {
 	invalid := []string{
-		"-abc",     // starts with hyphen
-		"abc-",     // ends with hyphen
-		"ABC",      // uppercase
+		"-abc",      // starts with hyphen
+		"abc-",      // ends with hyphen
+		"ABC",       // uppercase
 		"my tenant", // space
 		"my_tenant", // underscore
 		"my.tenant", // dot

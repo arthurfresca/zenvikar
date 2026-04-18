@@ -28,6 +28,9 @@ type tokenClaims struct {
 	TenantRoles  map[string]string `json:"tenantRoles,omitempty"`
 }
 
+// TokenClaims exposes parsed auth claims outside the users package.
+type TokenClaims = tokenClaims
+
 // TokenManager creates and validates JWT-like HS256 tokens.
 type TokenManager struct {
 	secret []byte

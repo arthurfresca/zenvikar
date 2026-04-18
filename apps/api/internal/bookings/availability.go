@@ -11,9 +11,9 @@ import (
 
 // Availability check errors.
 var (
-	ErrDateBlocked       = errors.New("date_blocked")
-	ErrOutsideHours      = errors.New("outside_hours")
-	ErrSlotTaken         = errors.New("slot_taken")
+	ErrDateBlocked  = errors.New("date_blocked")
+	ErrOutsideHours = errors.New("outside_hours")
+	ErrSlotTaken    = errors.New("slot_taken")
 )
 
 // AvailabilityResult holds the result of an availability check.
@@ -39,12 +39,16 @@ func CheckAvailability(
 	existingBookings []Booking,
 	service services.Service,
 	startTime time.Time,
-	slotIntervalMinutes int,
+	slotIntervalMinutes ...int,
 ) (*AvailabilityResult, error) {
+	interval := 0
+	if len(slotIntervalMinutes) > 0 {
+		interval = slotIntervalMinutes[0]
+	}
 	// Step 0: Validate slot alignment
-	if slotIntervalMinutes > 0 {
+	if interval > 0 {
 		minuteOfDay := startTime.Hour()*60 + startTime.Minute()
-		if minuteOfDay%slotIntervalMinutes != 0 || startTime.Second() != 0 {
+		if minuteOfDay%interval != 0 || startTime.Second() != 0 {
 			return &AvailabilityResult{Available: false, Reason: "invalid_slot_time"}, nil
 		}
 	}

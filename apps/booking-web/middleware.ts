@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const TOKEN_COOKIE = "zenvikar_booking_token";
-const PUBLIC_PATHS = ["/login", "/signup"];
+const AUTH_PAGES = ["/login", "/signup"];
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -10,18 +10,12 @@ export function middleware(request: NextRequest) {
     request.headers.get("host") ||
     "";
 
-  const isPublicPath = PUBLIC_PATHS.includes(pathname);
+  const isAuthPage = AUTH_PAGES.includes(pathname);
   const token = request.cookies.get(TOKEN_COOKIE)?.value;
-
-  if (!token && !isPublicPath) {
-    const loginURL = new URL("/login", request.url);
-    loginURL.searchParams.set("next", `${pathname}${search}`);
-    return NextResponse.redirect(loginURL);
-  }
 
   const isReauth = request.nextUrl.searchParams.get("reauth") === "1";
 
-  if (token && isPublicPath && !isReauth) {
+  if (token && isAuthPage && !isReauth) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 

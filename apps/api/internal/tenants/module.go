@@ -2,12 +2,15 @@ package tenants
 
 import (
 	"database/sql"
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/zenvikar/api/internal/platform"
+	"github.com/zenvikar/api/internal/platform/authn"
+	"github.com/zenvikar/api/internal/platform/authz"
+	"github.com/zenvikar/api/internal/platform/httpapi"
+	"github.com/zenvikar/api/internal/tenant_memberships"
 )
 
 // TenantsModule implements the platform.Module interface for the tenants domain.
@@ -25,14 +28,16 @@ func (m *TenantsModule) Name() string {
 
 // RegisterRoutes registers tenant-related HTTP routes.
 func (m *TenantsModule) RegisterRoutes(router chi.Router, deps platform.Dependencies) {
-	svc := NewService(NewRepository(deps.DB), deps.Redis)
+	repo := NewRepository(deps.DB)
+	svc := NewService(repo, deps.Redis)
+	membershipSvc := tenant_memberships.NewService(tenant_memberships.NewRepository(deps.DB))
+	authzSvc := authz.NewService(authz.NewPlatformAdminChecker(deps.DB), membershipSvc)
+	h := newHandler(svc, authzSvc)
 
 	router.Get("/api/v1/tenants/resolve", func(w http.ResponseWriter, r *http.Request) {
 		slug := r.URL.Query().Get("slug")
 		if slug == "" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{
+			httpapi.WriteJSON(w, http.StatusBadRequest, map[string]string{
 				"error":   "missing_slug",
 				"message": "slug query parameter is required",
 			})
@@ -41,23 +46,19 @@ func (m *TenantsModule) RegisterRoutes(router chi.Router, deps platform.Dependen
 
 		tenant, err := svc.ResolveTenantBySlug(r.Context(), slug)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
 			switch err {
 			case ErrTenantNotFound:
-				w.WriteHeader(http.StatusNotFound)
-				json.NewEncoder(w).Encode(map[string]string{
+				httpapi.WriteJSON(w, http.StatusNotFound, map[string]string{
 					"error":   "tenant_not_found",
 					"message": "No tenant found for this address",
 				})
 			case ErrTenantDisabled:
-				w.WriteHeader(http.StatusForbidden)
-				json.NewEncoder(w).Encode(map[string]string{
+				httpapi.WriteJSON(w, http.StatusForbidden, map[string]string{
 					"error":   "tenant_disabled",
 					"message": "This tenant is currently disabled",
 				})
 			default:
-				w.WriteHeader(http.StatusBadRequest)
-				json.NewEncoder(w).Encode(map[string]string{
+				httpapi.WriteJSON(w, http.StatusBadRequest, map[string]string{
 					"error":   "invalid_request",
 					"message": err.Error(),
 				})
@@ -65,9 +66,10 @@ func (m *TenantsModule) RegisterRoutes(router chi.Router, deps platform.Dependen
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(tenant)
+		httpapi.WriteJSON(w, http.StatusOK, tenant)
 	})
+
+	h.register(router, authn.RequireAuth(deps.Config.JWTSecret, deps.Config.JWTTTLMinutes))
 }
 
 // Migrate is a no-op — migrations are handled centrally by the migrations package.

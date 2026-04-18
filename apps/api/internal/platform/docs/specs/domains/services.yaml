@@ -1,0 +1,429 @@
+paths:
+  /api/v1/tenants/{tenantSlug}/services:
+    parameters:
+      - in: path
+        name: tenantSlug
+        required: true
+        schema:
+          type: string
+    get:
+      tags: [Booking Portal]
+      summary: List public services for a tenant
+      description: |
+        Returns the enabled services that a visitor can browse on a tenant booking page before signing in.
+
+        The response includes each service and the service members who can perform it, including per-member pricing.
+        This endpoint is intentionally public so customers can explore bookable services before deciding to sign in and create an appointment.
+      operationId: listPublicServices
+      parameters:
+        - in: path
+          name: tenantSlug
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public service catalog for the tenant
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  services:
+                    type: array
+                    items:
+                      $ref: '../openapi.yaml#/components/schemas/PublicService'
+              example:
+                services:
+                  - id: "9f02f13e-3320-4d75-a0c1-e4b9171a46b0"
+                    tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                    name: Haircut
+                    description: Classic haircut with wash and finish.
+                    durationMinutes: 45
+                    bufferBefore: 5
+                    bufferAfter: 10
+                    enabled: true
+                    createdAt: "2026-05-01T10:00:00Z"
+                    updatedAt: "2026-05-01T10:00:00Z"
+                    members:
+                      - id: "8bb4c6c3-9b3a-4c52-9682-34b7e6c35a90"
+                        serviceId: "9f02f13e-3320-4d75-a0c1-e4b9171a46b0"
+                        membershipId: "1d5f8db3-e7ec-4a1d-aeaf-10f81c9013d0"
+                        priceCents: 4500
+                        description: Senior barber rate.
+                        memberName: Maria Costa
+                        memberEmail: maria@acmestudio.test
+                        tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+  /api/v1/tenant/tenants/{tenantId}/services:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Tenant Services]
+      summary: List services in tenant scope
+      description: Lists all services for a tenant management workspace. Requires `services:read`.
+      operationId: listTenantServices
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tenant services
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  services:
+                    type: array
+                    items:
+                      $ref: '../openapi.yaml#/components/schemas/Service'
+              example:
+                services:
+                  - id: "9f02f13e-3320-4d75-a0c1-e4b9171a46b0"
+                    tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                    name: Haircut
+                    description: Classic haircut with wash and finish.
+                    durationMinutes: 45
+                    bufferBefore: 5
+                    bufferAfter: 10
+                    enabled: true
+                    createdAt: "2026-05-01T10:00:00Z"
+                    updatedAt: "2026-05-01T10:00:00Z"
+    post:
+      tags: [Tenant Services]
+      summary: Create a tenant service
+      description: Creates a new bookable service for the tenant. Requires `services:create`.
+      operationId: createTenantService
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/ServiceRequest'
+            example:
+              name: Haircut
+              description: Classic haircut with wash and finish.
+              durationMinutes: 45
+              bufferBefore: 5
+              bufferAfter: 10
+              enabled: true
+      responses:
+        '201':
+          description: Service created
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Service'
+              example:
+                id: "9f02f13e-3320-4d75-a0c1-e4b9171a46b0"
+                tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                name: Haircut
+                description: Classic haircut with wash and finish.
+                durationMinutes: 45
+                bufferBefore: 5
+                bufferAfter: 10
+                enabled: true
+                createdAt: "2026-05-01T10:00:00Z"
+                updatedAt: "2026-05-01T10:00:00Z"
+  /api/v1/tenant/tenants/{tenantId}/services/{serviceId}:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: serviceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Tenant Services]
+      summary: Get one tenant service
+      description: Loads one service in tenant scope. Requires `services:read`.
+      operationId: getTenantService
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: serviceId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Service details
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Service'
+              example:
+                id: "9f02f13e-3320-4d75-a0c1-e4b9171a46b0"
+                tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                name: Haircut
+                description: Classic haircut with wash and finish.
+                durationMinutes: 45
+                bufferBefore: 5
+                bufferAfter: 10
+                enabled: true
+                createdAt: "2026-05-01T10:00:00Z"
+                updatedAt: "2026-05-01T10:00:00Z"
+    patch:
+      tags: [Tenant Services]
+      summary: Update a tenant service
+      description: Updates editable service fields such as duration, buffers, description, and enabled state. Requires `services:update`.
+      operationId: updateTenantService
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: serviceId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/ServiceRequest'
+            example:
+              name: Haircut and Beard Trim
+              description: Extended appointment with beard shaping.
+              durationMinutes: 60
+              bufferBefore: 5
+              bufferAfter: 15
+              enabled: true
+      responses:
+        '200':
+          description: Updated service
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Service'
+              example:
+                id: "9f02f13e-3320-4d75-a0c1-e4b9171a46b0"
+                tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                name: Haircut and Beard Trim
+                description: Extended appointment with beard shaping.
+                durationMinutes: 60
+                bufferBefore: 5
+                bufferAfter: 15
+                enabled: true
+                createdAt: "2026-05-01T10:00:00Z"
+                updatedAt: "2026-05-05T09:30:00Z"
+    delete:
+      tags: [Tenant Services]
+      summary: Delete a tenant service
+      description: Deletes a service and any cascading service-member records. Requires `services:delete`.
+      operationId: deleteTenantService
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: serviceId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Service deleted
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/StatusOK'
+  /api/v1/tenant/tenants/{tenantId}/services/{serviceId}/members:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: serviceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Tenant Services]
+      summary: List service members
+      description: Lists staff assignments for a service, including price and member identity. Requires `services:read`.
+      operationId: listServiceMembers
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: serviceId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Service-member assignments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  members:
+                    type: array
+                    items:
+                      $ref: '../openapi.yaml#/components/schemas/ServiceMemberDetails'
+              example:
+                members:
+                  - id: "8bb4c6c3-9b3a-4c52-9682-34b7e6c35a90"
+                    serviceId: "9f02f13e-3320-4d75-a0c1-e4b9171a46b0"
+                    membershipId: "1d5f8db3-e7ec-4a1d-aeaf-10f81c9013d0"
+                    priceCents: 4500
+                    description: Senior barber rate.
+                    memberName: Maria Costa
+                    memberEmail: maria@acmestudio.test
+                    tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+    post:
+      tags: [Tenant Services]
+      summary: Assign a membership to a service
+      description: Links an existing tenant membership to a service and sets pricing details. Requires `services:update`.
+      operationId: addServiceMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: serviceId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/AddServiceMemberRequest'
+            example:
+              membershipId: "1d5f8db3-e7ec-4a1d-aeaf-10f81c9013d0"
+              priceCents: 4500
+              description: Senior barber rate.
+      responses:
+        '201':
+          description: Service member created
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/ServiceMember'
+              example:
+                id: "8bb4c6c3-9b3a-4c52-9682-34b7e6c35a90"
+                serviceId: "9f02f13e-3320-4d75-a0c1-e4b9171a46b0"
+                membershipId: "1d5f8db3-e7ec-4a1d-aeaf-10f81c9013d0"
+                priceCents: 4500
+                description: Senior barber rate.
+  /api/v1/tenant/tenants/{tenantId}/services/{serviceId}/members/{serviceMemberId}:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: serviceId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: serviceMemberId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    delete:
+      tags: [Tenant Services]
+      summary: Remove a service member assignment
+      description: Unlinks a tenant membership from a service. Requires `services:update`.
+      operationId: removeServiceMember
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: serviceId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: serviceMemberId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Assignment removed
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/StatusOK'

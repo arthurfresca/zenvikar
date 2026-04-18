@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/zenvikar/api/internal/platform"
+	"github.com/zenvikar/api/internal/platform/authn"
 )
 
 // TenantMembershipsModule implements the platform.Module interface for tenant memberships.
@@ -22,7 +23,12 @@ func (m *TenantMembershipsModule) Name() string {
 }
 
 // RegisterRoutes registers tenant membership HTTP routes.
-func (m *TenantMembershipsModule) RegisterRoutes(router chi.Router, deps platform.Dependencies) {}
+func (m *TenantMembershipsModule) RegisterRoutes(router chi.Router, deps platform.Dependencies) {
+	repo := NewRepository(deps.DB)
+	svc := NewService(repo)
+	h := newHandler(svc, deps.DB)
+	h.register(router, authn.RequireAuth(deps.Config.JWTSecret, deps.Config.JWTTTLMinutes))
+}
 
 // Migrate is a no-op — migrations are handled centrally by the migrations package.
 func (m *TenantMembershipsModule) Migrate(db *sql.DB) error {

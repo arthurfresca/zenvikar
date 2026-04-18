@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -68,4 +69,14 @@ func (s *Service) ResolveTenantBySlug(ctx context.Context, slug string) (*Tenant
 	}
 
 	return tenant, nil
+}
+
+// GetByID returns a tenant by ID.
+func (s *Service) GetByID(ctx context.Context, tenantID uuid.UUID) (*Tenant, error) {
+	return s.repo.FindByID(ctx, tenantID)
+}
+
+// Update updates tenant settings.
+func (s *Service) Update(ctx context.Context, tenantID uuid.UUID, input UpdateTenantInput) (*Tenant, error) {
+	return s.repo.Update(ctx, tenantID, input)
 }

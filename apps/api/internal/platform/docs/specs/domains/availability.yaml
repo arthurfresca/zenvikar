@@ -1,0 +1,335 @@
+paths:
+  /api/v1/tenants/{tenantSlug}/service-members/{serviceMemberId}/availability:
+    parameters:
+      - in: path
+        name: tenantSlug
+        required: true
+        schema:
+          type: string
+      - in: path
+        name: serviceMemberId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Booking Portal]
+      summary: List public slots for a service member
+      description: |
+        Returns all currently bookable slots for one service member on a given date.
+
+        The slot generator applies the tenant slot interval, opening hours, blocked dates, service duration,
+        and service buffers around existing bookings. This endpoint is public so customers can check availability before logging in.
+      operationId: listPublicAvailability
+      parameters:
+        - in: path
+          name: tenantSlug
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: serviceMemberId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: date
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Available slots for the requested day
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: date
+                  slots:
+                    type: array
+                    items:
+                      $ref: '../openapi.yaml#/components/schemas/AvailableSlot'
+              example:
+                date: "2026-05-20"
+                slots:
+                  - startTime: "2026-05-20T14:00:00Z"
+                    endTime: "2026-05-20T14:45:00Z"
+                  - startTime: "2026-05-20T15:00:00Z"
+                    endTime: "2026-05-20T15:45:00Z"
+  /api/v1/tenant/tenants/{tenantId}/service-members/{serviceMemberId}/opening-hours:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: serviceMemberId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Tenant Availability]
+      summary: List opening hours for a service member
+      description: Lists the weekly opening-hour rules that drive public slot generation. Requires `availability:read`.
+      operationId: listOpeningHours
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: serviceMemberId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Opening hour rules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  openingHours:
+                    type: array
+                    items:
+                      $ref: '../openapi.yaml#/components/schemas/OpeningHours'
+              example:
+                openingHours:
+                  - id: "a5ddd651-c07a-4026-bcf4-0ec8667a9649"
+                    serviceMemberId: "8bb4c6c3-9b3a-4c52-9682-34b7e6c35a90"
+                    dayOfWeek: 1
+                    openTime: "09:00:00"
+                    closeTime: "18:00:00"
+                    enabled: true
+  /api/v1/tenant/tenants/{tenantId}/service-members/{serviceMemberId}/opening-hours/{dayOfWeek}:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: serviceMemberId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: dayOfWeek
+        required: true
+        schema:
+          type: integer
+          minimum: 0
+          maximum: 6
+    put:
+      tags: [Tenant Availability]
+      summary: Upsert opening hours for one weekday
+      description: Creates or replaces the opening-hours rule for a specific weekday. Requires `availability:update`.
+      operationId: upsertOpeningHours
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: serviceMemberId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: dayOfWeek
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 6
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/UpsertOpeningHoursRequest'
+            example:
+              openTime: "09:00"
+              closeTime: "18:00"
+              enabled: true
+      responses:
+        '200':
+          description: Saved opening-hour rule
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/OpeningHours'
+              example:
+                id: "a5ddd651-c07a-4026-bcf4-0ec8667a9649"
+                serviceMemberId: "8bb4c6c3-9b3a-4c52-9682-34b7e6c35a90"
+                dayOfWeek: 1
+                openTime: "09:00:00"
+                closeTime: "18:00:00"
+                enabled: true
+  /api/v1/tenant/tenants/{tenantId}/memberships/{membershipId}/blocked-dates:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: membershipId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Tenant Availability]
+      summary: List blocked dates for a membership
+      description: Lists full-day time-off records that block every service handled by that membership. Requires `availability:read`.
+      operationId: listBlockedDates
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: membershipId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Blocked dates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  blockedDates:
+                    type: array
+                    items:
+                      $ref: '../openapi.yaml#/components/schemas/BlockedDate'
+              example:
+                blockedDates:
+                  - id: "4f03a95b-6d9f-42f6-a8cc-3b1f61bc7c44"
+                    membershipId: "1d5f8db3-e7ec-4a1d-aeaf-10f81c9013d0"
+                    date: "2026-05-22"
+                    reason: Vacation day
+    post:
+      tags: [Tenant Availability]
+      summary: Create a blocked date
+      description: Adds a full-day availability block for a membership. Requires `availability:update`.
+      operationId: createBlockedDate
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: membershipId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/CreateBlockedDateRequest'
+            example:
+              date: "2026-05-22"
+              reason: Vacation day
+      responses:
+        '201':
+          description: Blocked date created
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/BlockedDate'
+              example:
+                id: "4f03a95b-6d9f-42f6-a8cc-3b1f61bc7c44"
+                membershipId: "1d5f8db3-e7ec-4a1d-aeaf-10f81c9013d0"
+                date: "2026-05-22"
+                reason: Vacation day
+  /api/v1/tenant/tenants/{tenantId}/memberships/{membershipId}/blocked-dates/{date}:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: membershipId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: date
+        required: true
+        schema:
+          type: string
+          format: date
+    delete:
+      tags: [Tenant Availability]
+      summary: Delete a blocked date
+      description: Removes a blocked day-off record. Requires `availability:update`.
+      operationId: deleteBlockedDate
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: membershipId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: date
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Blocked date removed
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/StatusOK'

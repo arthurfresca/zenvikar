@@ -15,6 +15,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 
+	"github.com/zenvikar/api/internal/availability"
+	"github.com/zenvikar/api/internal/bookings"
 	"github.com/zenvikar/api/internal/platform"
 	"github.com/zenvikar/api/internal/platform/config"
 	"github.com/zenvikar/api/internal/platform/docs"
@@ -22,6 +24,8 @@ import (
 	"github.com/zenvikar/api/internal/platform/logger"
 	appmiddleware "github.com/zenvikar/api/internal/platform/middleware"
 	appotel "github.com/zenvikar/api/internal/platform/otel"
+	servicesmodule "github.com/zenvikar/api/internal/services"
+	"github.com/zenvikar/api/internal/tenant_memberships"
 	"github.com/zenvikar/api/internal/tenants"
 	"github.com/zenvikar/api/internal/users"
 	"github.com/zenvikar/api/migrations"
@@ -77,6 +81,10 @@ func main() {
 	modules := []platform.Module{
 		tenants.New(),
 		users.New(),
+		servicesmodule.New(),
+		availability.New(),
+		tenant_memberships.New(),
+		bookings.New(),
 	}
 
 	// Set up router

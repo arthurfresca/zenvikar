@@ -22,6 +22,18 @@ tags:
     description: Runtime metrics for Prometheus scraping.
   - name: Tenants
     description: Tenant resolution for subdomain-driven multi-tenancy.
+  - name: Booking Portal
+    description: Authenticated booking and self-service endpoints for end users.
+  - name: Tenant Services
+    description: Tenant-side service catalog and service-member management.
+  - name: Tenant Availability
+    description: Tenant-side opening hours, blocked dates, and public slot discovery.
+  - name: Tenant Staff
+    description: Tenant membership management for owners and managers.
+  - name: Tenant Bookings
+    description: Tenant-side booking operations for staff, managers, owners, and finance viewers.
+  - name: Tenant Management
+    description: Tenant profile and settings management.
 paths:
   /healthz:
     $ref: "./domains/platform.yaml#/paths/~1healthz"
@@ -53,6 +65,44 @@ paths:
     $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1me"
   /api/v1/auth/tenants:
     $ref: "./domains/auth.yaml#/paths/~1api~1v1~1auth~1tenants"
+  /api/v1/tenants/{tenantSlug}/services:
+    $ref: "./domains/services.yaml#/paths/~1api~1v1~1tenants~1{tenantSlug}~1services"
+  /api/v1/tenants/{tenantSlug}/service-members/{serviceMemberId}/availability:
+    $ref: "./domains/availability.yaml#/paths/~1api~1v1~1tenants~1{tenantSlug}~1service-members~1{serviceMemberId}~1availability"
+  /api/v1/tenants/{tenantSlug}/bookings:
+    $ref: "./domains/bookings.yaml#/paths/~1api~1v1~1tenants~1{tenantSlug}~1bookings"
+  /api/v1/me/bookings:
+    $ref: "./domains/bookings.yaml#/paths/~1api~1v1~1me~1bookings"
+  /api/v1/me/bookings/{bookingId}:
+    $ref: "./domains/bookings.yaml#/paths/~1api~1v1~1me~1bookings~1{bookingId}"
+  /api/v1/me/bookings/{bookingId}/cancel:
+    $ref: "./domains/bookings.yaml#/paths/~1api~1v1~1me~1bookings~1{bookingId}~1cancel"
+  /api/v1/tenant/tenants/{tenantId}:
+    $ref: "./domains/tenant_management.yaml#/paths/~1api~1v1~1tenant~1tenants~1{tenantId}"
+  /api/v1/tenant/tenants/{tenantId}/services:
+    $ref: "./domains/services.yaml#/paths/~1api~1v1~1tenant~1tenants~1{tenantId}~1services"
+  /api/v1/tenant/tenants/{tenantId}/services/{serviceId}:
+    $ref: "./domains/services.yaml#/paths/~1api~1v1~1tenant~1tenants~1{tenantId}~1services~1{serviceId}"
+  /api/v1/tenant/tenants/{tenantId}/services/{serviceId}/members:
+    $ref: "./domains/services.yaml#/paths/~1api~1v1~1tenant~1tenants~1{tenantId}~1services~1{serviceId}~1members"
+  /api/v1/tenant/tenants/{tenantId}/services/{serviceId}/members/{serviceMemberId}:
+    $ref: "./domains/services.yaml#/paths/~1api~1v1~1tenant~1tenants~1{tenantId}~1services~1{serviceId}~1members~1{serviceMemberId}"
+  /api/v1/tenant/tenants/{tenantId}/service-members/{serviceMemberId}/opening-hours:
+    $ref: "./domains/availability.yaml#/paths/~1api~1v1~1tenant~1tenants~1{tenantId}~1service-members~1{serviceMemberId}~1opening-hours"
+  /api/v1/tenant/tenants/{tenantId}/service-members/{serviceMemberId}/opening-hours/{dayOfWeek}:
+    $ref: "./domains/availability.yaml#/paths/~1api~1v1~1tenant~1tenants~1{tenantId}~1service-members~1{serviceMemberId}~1opening-hours~1{dayOfWeek}"
+  /api/v1/tenant/tenants/{tenantId}/memberships:
+    $ref: "./domains/tenant_memberships.yaml#/paths/~1api~1v1~1tenant~1tenants~1{tenantId}~1memberships"
+  /api/v1/tenant/tenants/{tenantId}/memberships/{membershipId}:
+    $ref: "./domains/tenant_memberships.yaml#/paths/~1api~1v1~1tenant~1tenants~1{tenantId}~1memberships~1{membershipId}"
+  /api/v1/tenant/tenants/{tenantId}/memberships/{membershipId}/blocked-dates:
+    $ref: "./domains/availability.yaml#/paths/~1api~1v1~1tenant~1tenants~1{tenantId}~1memberships~1{membershipId}~1blocked-dates"
+  /api/v1/tenant/tenants/{tenantId}/memberships/{membershipId}/blocked-dates/{date}:
+    $ref: "./domains/availability.yaml#/paths/~1api~1v1~1tenant~1tenants~1{tenantId}~1memberships~1{membershipId}~1blocked-dates~1{date}"
+  /api/v1/tenant/tenants/{tenantId}/bookings:
+    $ref: "./domains/bookings.yaml#/paths/~1api~1v1~1tenant~1tenants~1{tenantId}~1bookings"
+  /api/v1/tenant/tenants/{tenantId}/bookings/{bookingId}:
+    $ref: "./domains/bookings.yaml#/paths/~1api~1v1~1tenant~1tenants~1{tenantId}~1bookings~1{bookingId}"
 
 components:
   securitySchemes:
@@ -291,3 +341,323 @@ components:
           type: string
         role:
           type: string
+    Booking:
+      type: object
+      required: [id, tenantId, serviceMemberId, customerId, priceCents, startTime, endTime, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        serviceMemberId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        priceCents:
+          type: integer
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateBookingRequest:
+      type: object
+      required: [serviceMemberId, startTime]
+      properties:
+        serviceMemberId:
+          type: string
+          format: uuid
+        startTime:
+          type: string
+          format: date-time
+          description: Requested slot start in RFC3339 format.
+    UpdateBookingStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled]
+    Service:
+      type: object
+      required: [id, tenantId, name, durationMinutes, bufferBefore, bufferAfter, enabled, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        durationMinutes:
+          type: integer
+        bufferBefore:
+          type: integer
+        bufferAfter:
+          type: integer
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ServiceMember:
+      type: object
+      required: [id, serviceId, membershipId, priceCents]
+      properties:
+        id:
+          type: string
+          format: uuid
+        serviceId:
+          type: string
+          format: uuid
+        membershipId:
+          type: string
+          format: uuid
+        priceCents:
+          type: integer
+        description:
+          type: string
+          nullable: true
+    ServiceMemberDetails:
+      allOf:
+        - $ref: '#/components/schemas/ServiceMember'
+        - type: object
+          required: [memberName, memberEmail, tenantId]
+          properties:
+            memberName:
+              type: string
+            memberEmail:
+              type: string
+              format: email
+            tenantId:
+              type: string
+              format: uuid
+    PublicService:
+      allOf:
+        - $ref: '#/components/schemas/Service'
+        - type: object
+          required: [members]
+          properties:
+            members:
+              type: array
+              items:
+                $ref: '#/components/schemas/ServiceMemberDetails'
+    ServiceRequest:
+      type: object
+      required: [name, durationMinutes]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        durationMinutes:
+          type: integer
+          minimum: 1
+        bufferBefore:
+          type: integer
+          minimum: 0
+        bufferAfter:
+          type: integer
+          minimum: 0
+        enabled:
+          type: boolean
+    AddServiceMemberRequest:
+      type: object
+      required: [membershipId, priceCents]
+      properties:
+        membershipId:
+          type: string
+          format: uuid
+        priceCents:
+          type: integer
+          minimum: 0
+        description:
+          type: string
+          nullable: true
+    OpeningHours:
+      type: object
+      required: [id, serviceMemberId, dayOfWeek, openTime, closeTime, enabled]
+      properties:
+        id:
+          type: string
+          format: uuid
+        serviceMemberId:
+          type: string
+          format: uuid
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        openTime:
+          type: string
+          example: "09:00:00"
+        closeTime:
+          type: string
+          example: "18:00:00"
+        enabled:
+          type: boolean
+    UpsertOpeningHoursRequest:
+      type: object
+      required: [openTime, closeTime, enabled]
+      properties:
+        openTime:
+          type: string
+        closeTime:
+          type: string
+        enabled:
+          type: boolean
+    BlockedDate:
+      type: object
+      required: [id, membershipId, date]
+      properties:
+        id:
+          type: string
+          format: uuid
+        membershipId:
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        reason:
+          type: string
+          nullable: true
+    CreateBlockedDateRequest:
+      type: object
+      required: [date]
+      properties:
+        date:
+          type: string
+          format: date
+        reason:
+          type: string
+          nullable: true
+    AvailableSlot:
+      type: object
+      required: [startTime, endTime]
+      properties:
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+    TenantMembership:
+      type: object
+      required: [id, tenantId, userId, role, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        tenantId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        role:
+          type: string
+        photoUrl:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    MembershipDetails:
+      allOf:
+        - $ref: '#/components/schemas/TenantMembership'
+        - type: object
+          required: [user]
+          properties:
+            user:
+              $ref: '#/components/schemas/TenantAuthUser'
+    CreateMembershipRequest:
+      type: object
+      required: [userId, role]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [tenant_owner, tenant_manager, tenant_staff, tenant_finance_viewer]
+        photoUrl:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+    UpdateMembershipRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [tenant_owner, tenant_manager, tenant_staff, tenant_finance_viewer]
+        photoUrl:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+    UpdateTenantRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        logoUrl:
+          type: string
+          nullable: true
+        colorPrimary:
+          type: string
+        colorSecondary:
+          type: string
+        colorAccent:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        currency:
+          type: string
+        slotIntervalMinutes:
+          type: integer
+        timezone:
+          type: string
+        defaultLocale:
+          type: string
+          enum: [en, pt]
+        enabled:
+          type: boolean

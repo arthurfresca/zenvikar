@@ -1,0 +1,229 @@
+paths:
+  /api/v1/tenant/tenants/{tenantId}/memberships:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Tenant Staff]
+      summary: List tenant memberships
+      description: Returns the tenant's staff and role assignments together with user profile data. Requires `staff:read`.
+      operationId: listTenantMemberships
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Memberships in tenant scope
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  memberships:
+                    type: array
+                    items:
+                      $ref: '../openapi.yaml#/components/schemas/MembershipDetails'
+              example:
+                memberships:
+                  - id: "1d5f8db3-e7ec-4a1d-aeaf-10f81c9013d0"
+                    tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                    userId: "2cb3cf58-f0b2-49cd-b55a-8a8d512f8344"
+                    role: tenant_staff
+                    photoUrl: "https://cdn.example.com/staff/maria.jpg"
+                    description: Specialist in color treatment and styling.
+                    createdAt: "2026-05-01T10:00:00Z"
+                    updatedAt: "2026-05-01T10:00:00Z"
+                    user:
+                      id: "2cb3cf58-f0b2-49cd-b55a-8a8d512f8344"
+                      email: maria@acmestudio.test
+                      name: Maria Costa
+                      phone: "+1-555-0199"
+                      preferredContact: email
+                      locale: en
+                      emailVerified: true
+                      createdAt: "2026-04-20T12:00:00Z"
+                      updatedAt: "2026-04-20T12:00:00Z"
+    post:
+      tags: [Tenant Staff]
+      summary: Create a tenant membership
+      description: Adds a user to the tenant with one of the supported tenant roles. Requires `staff:create`.
+      operationId: createTenantMembership
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/CreateMembershipRequest'
+            example:
+              userId: "2cb3cf58-f0b2-49cd-b55a-8a8d512f8344"
+              role: tenant_staff
+              photoUrl: "https://cdn.example.com/staff/maria.jpg"
+              description: Specialist in color treatment and styling.
+      responses:
+        '201':
+          description: Membership created
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/TenantMembership'
+              example:
+                id: "1d5f8db3-e7ec-4a1d-aeaf-10f81c9013d0"
+                tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                userId: "2cb3cf58-f0b2-49cd-b55a-8a8d512f8344"
+                role: tenant_staff
+                photoUrl: "https://cdn.example.com/staff/maria.jpg"
+                description: Specialist in color treatment and styling.
+                createdAt: "2026-05-01T10:00:00Z"
+                updatedAt: "2026-05-01T10:00:00Z"
+  /api/v1/tenant/tenants/{tenantId}/memberships/{membershipId}:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - in: path
+        name: membershipId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Tenant Staff]
+      summary: Get one tenant membership
+      description: Loads one membership with user details in tenant scope. Requires `staff:read`.
+      operationId: getTenantMembership
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: membershipId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Membership details
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/MembershipDetails'
+              example:
+                id: "1d5f8db3-e7ec-4a1d-aeaf-10f81c9013d0"
+                tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                userId: "2cb3cf58-f0b2-49cd-b55a-8a8d512f8344"
+                role: tenant_staff
+                photoUrl: "https://cdn.example.com/staff/maria.jpg"
+                description: Specialist in color treatment and styling.
+                createdAt: "2026-05-01T10:00:00Z"
+                updatedAt: "2026-05-01T10:00:00Z"
+                user:
+                  id: "2cb3cf58-f0b2-49cd-b55a-8a8d512f8344"
+                  email: maria@acmestudio.test
+                  name: Maria Costa
+                  phone: "+1-555-0199"
+                  preferredContact: email
+                  locale: en
+                  emailVerified: true
+                  createdAt: "2026-04-20T12:00:00Z"
+                  updatedAt: "2026-04-20T12:00:00Z"
+    patch:
+      tags: [Tenant Staff]
+      summary: Update a tenant membership
+      description: Updates role and profile metadata for a tenant membership. Requires `staff:update`.
+      operationId: updateTenantMembership
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: membershipId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/UpdateMembershipRequest'
+            example:
+              role: tenant_manager
+              photoUrl: "https://cdn.example.com/staff/maria-new.jpg"
+              description: Promoted to salon manager.
+      responses:
+        '200':
+          description: Membership updated
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/TenantMembership'
+              example:
+                id: "1d5f8db3-e7ec-4a1d-aeaf-10f81c9013d0"
+                tenantId: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                userId: "2cb3cf58-f0b2-49cd-b55a-8a8d512f8344"
+                role: tenant_manager
+                photoUrl: "https://cdn.example.com/staff/maria-new.jpg"
+                description: Promoted to salon manager.
+                createdAt: "2026-05-01T10:00:00Z"
+                updatedAt: "2026-05-05T09:30:00Z"
+    delete:
+      tags: [Tenant Staff]
+      summary: Delete a tenant membership
+      description: Removes a user from the tenant. Requires `staff:delete`.
+      operationId: deleteTenantMembership
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: membershipId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Membership deleted
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/StatusOK'

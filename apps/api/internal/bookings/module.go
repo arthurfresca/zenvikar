@@ -6,6 +6,10 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/zenvikar/api/internal/platform"
+	"github.com/zenvikar/api/internal/platform/authn"
+	"github.com/zenvikar/api/internal/platform/authz"
+	"github.com/zenvikar/api/internal/tenant_memberships"
+	"github.com/zenvikar/api/internal/tenants"
 )
 
 // BookingsModule implements the platform.Module interface for the bookings domain.
@@ -22,7 +26,15 @@ func (m *BookingsModule) Name() string {
 }
 
 // RegisterRoutes registers booking-related HTTP routes.
-func (m *BookingsModule) RegisterRoutes(router chi.Router, deps platform.Dependencies) {}
+func (m *BookingsModule) RegisterRoutes(router chi.Router, deps platform.Dependencies) {
+	repo := NewRepository(deps.DB)
+	bookingSvc := NewBookingService(deps.DB, repo)
+	tenantSvc := tenants.NewService(tenants.NewRepository(deps.DB), deps.Redis)
+	membershipSvc := tenant_memberships.NewService(tenant_memberships.NewRepository(deps.DB))
+	authzSvc := authz.NewService(authz.NewPlatformAdminChecker(deps.DB), membershipSvc)
+	h := newHandler(repo, bookingSvc, tenantSvc, authzSvc)
+	h.register(router, authn.RequireAuth(deps.Config.JWTSecret, deps.Config.JWTTTLMinutes))
+}
 
 // Migrate is a no-op — migrations are handled centrally by the migrations package.
 func (m *BookingsModule) Migrate(db *sql.DB) error {

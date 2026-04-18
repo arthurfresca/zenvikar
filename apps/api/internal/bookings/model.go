@@ -17,6 +17,7 @@ const (
 type Booking struct {
 	ID              uuid.UUID `json:"id" db:"id"`
 	TenantID        uuid.UUID `json:"tenantId" db:"tenant_id"`
+	ServiceID       uuid.UUID `json:"serviceId,omitempty" db:"-"`
 	ServiceMemberID uuid.UUID `json:"serviceMemberId" db:"service_member_id"`
 	CustomerID      uuid.UUID `json:"customerId" db:"customer_id"`
 	PriceCents      int       `json:"priceCents" db:"price_cents"`

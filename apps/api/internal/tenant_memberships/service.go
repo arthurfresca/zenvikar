@@ -29,3 +29,38 @@ func (s *Service) CheckMembership(ctx context.Context, userID, tenantID uuid.UUI
 	}
 	return membership, nil
 }
+
+// ListByTenant returns all memberships for a tenant with user details.
+func (s *Service) ListByTenant(ctx context.Context, tenantID uuid.UUID) ([]MembershipDetails, error) {
+	return s.repo.ListByTenant(ctx, tenantID)
+}
+
+// GetByTenant returns a membership in tenant scope.
+func (s *Service) GetByTenant(ctx context.Context, tenantID, membershipID uuid.UUID) (*MembershipDetails, error) {
+	return s.repo.GetByTenant(ctx, tenantID, membershipID)
+}
+
+// Create creates a membership in tenant scope.
+func (s *Service) Create(ctx context.Context, tenantID uuid.UUID, input CreateMembershipInput) (*TenantMembership, error) {
+	return s.repo.Create(ctx, tenantID, input)
+}
+
+// Update updates a membership in tenant scope.
+func (s *Service) Update(ctx context.Context, tenantID, membershipID uuid.UUID, input UpdateMembershipInput) (*TenantMembership, error) {
+	return s.repo.Update(ctx, tenantID, membershipID, input)
+}
+
+// Delete deletes a membership in tenant scope.
+func (s *Service) Delete(ctx context.Context, tenantID, membershipID uuid.UUID) error {
+	return s.repo.Delete(ctx, tenantID, membershipID)
+}
+
+// ValidRole reports whether the given role is supported.
+func ValidRole(role string) bool {
+	switch role {
+	case RoleTenantOwner, RoleTenantManager, RoleTenantStaff, RoleTenantFinanceViewer:
+		return true
+	default:
+		return false
+	}
+}

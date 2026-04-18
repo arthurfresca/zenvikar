@@ -1,0 +1,112 @@
+paths:
+  /api/v1/tenant/tenants/{tenantId}:
+    parameters:
+      - in: path
+        name: tenantId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Tenant Management]
+      summary: Get tenant settings
+      description: Reads the tenant profile, branding, and scheduling settings. Requires `branding:read`.
+      operationId: getTenant
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tenant settings
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Tenant'
+              example:
+                id: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                slug: acme-studio
+                displayName: Acme Studio
+                logoUrl: "https://cdn.example.com/tenants/acme/logo.png"
+                colorPrimary: "#111827"
+                colorSecondary: "#374151"
+                colorAccent: "#f59e0b"
+                phone: "+1-555-0110"
+                email: "hello@acmestudio.test"
+                address: "100 Main St, Toronto"
+                currency: CAD
+                slotIntervalMinutes: 15
+                timezone: America/Toronto
+                defaultLocale: en
+                enabled: true
+                createdAt: "2026-04-10T20:10:00Z"
+                updatedAt: "2026-05-01T10:00:00Z"
+    patch:
+      tags: [Tenant Management]
+      summary: Update tenant settings
+      description: |
+        Updates tenant-facing profile and scheduling settings such as branding colors, contact information,
+        locale, timezone, slot interval, and enabled state.
+
+        This endpoint is restricted to users with enough tenant-management authority; in the current implementation
+        that maps to the existing `services:update` permission, which tenant owners and managers already hold.
+      operationId: updateTenant
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: tenantId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../openapi.yaml#/components/schemas/UpdateTenantRequest'
+            example:
+              displayName: Acme Studio
+              logoUrl: "https://cdn.example.com/tenants/acme/logo.png"
+              colorPrimary: "#111827"
+              colorSecondary: "#374151"
+              colorAccent: "#f59e0b"
+              phone: "+1-555-0110"
+              email: "hello@acmestudio.test"
+              address: "100 Main St, Toronto"
+              currency: CAD
+              slotIntervalMinutes: 15
+              timezone: America/Toronto
+              defaultLocale: en
+              enabled: true
+      responses:
+        '200':
+          description: Updated tenant settings
+          content:
+            application/json:
+              schema:
+                $ref: '../openapi.yaml#/components/schemas/Tenant'
+              example:
+                id: "7d9f40d8-7d28-425a-a96f-27556631c6d2"
+                slug: acme-studio
+                displayName: Acme Studio
+                logoUrl: "https://cdn.example.com/tenants/acme/logo.png"
+                colorPrimary: "#111827"
+                colorSecondary: "#374151"
+                colorAccent: "#f59e0b"
+                phone: "+1-555-0110"
+                email: "hello@acmestudio.test"
+                address: "100 Main St, Toronto"
+                currency: CAD
+                slotIntervalMinutes: 15
+                timezone: America/Toronto
+                defaultLocale: en
+                enabled: true
+                createdAt: "2026-04-10T20:10:00Z"
+                updatedAt: "2026-05-05T09:30:00Z"
