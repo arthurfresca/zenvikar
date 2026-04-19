@@ -292,7 +292,12 @@ paths:
     get:
       tags: [Tenant Services]
       summary: List service members
-      description: Lists staff assignments for a service, including price and member identity. Requires `services:read`.
+      description: |
+        Lists staff assignments for a service, including price and member identity. Requires `services:read`.
+
+        Visibility rules:
+        - `tenant_owner` and `tenant_manager` can see all service members in the tenant.
+        - `tenant_staff` can only see their own service-member entries.
       operationId: listServiceMembers
       security:
         - bearerAuth: []

@@ -12,6 +12,7 @@ import (
 	"github.com/zenvikar/api/internal/platform/authz"
 	"github.com/zenvikar/api/internal/platform/endpointutil"
 	"github.com/zenvikar/api/internal/platform/httpapi"
+	"github.com/zenvikar/api/internal/tenant_memberships"
 	"github.com/zenvikar/api/internal/tenants"
 )
 
@@ -20,6 +21,7 @@ type handler struct {
 	bookingSvc *BookingService
 	tenantSvc  *tenants.Service
 	authzSvc   *authz.Service
+	memberSvc  *tenant_memberships.Service
 }
 
 type createBookingRequest struct {
@@ -31,8 +33,8 @@ type updateTenantBookingRequest struct {
 	Status string `json:"status"`
 }
 
-func newHandler(repo *Repository, bookingSvc *BookingService, tenantSvc *tenants.Service, authzSvc *authz.Service) *handler {
-	return &handler{repo: repo, bookingSvc: bookingSvc, tenantSvc: tenantSvc, authzSvc: authzSvc}
+func newHandler(repo *Repository, bookingSvc *BookingService, tenantSvc *tenants.Service, authzSvc *authz.Service, memberSvc *tenant_memberships.Service) *handler {
+	return &handler{repo: repo, bookingSvc: bookingSvc, tenantSvc: tenantSvc, authzSvc: authzSvc, memberSvc: memberSvc}
 }
 
 func (h *handler) register(router chi.Router, requireAuth func(http.Handler) http.Handler) {
@@ -161,7 +163,21 @@ func (h *handler) listTenant(w http.ResponseWriter, r *http.Request) {
 		}
 		to = &value
 	}
-	items, err := h.repo.ListByTenant(r.Context(), tenantID, from, to)
+	userID, ok := endpointutil.CurrentUserID(w, r)
+	if !ok {
+		return
+	}
+	membership, err := h.memberSvc.CheckMembership(r.Context(), userID, tenantID)
+	if err != nil {
+		httpapi.WriteJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "user is not a member of this tenant"})
+		return
+	}
+	var items []Booking
+	if membership.Role == tenant_memberships.RoleTenantStaff {
+		items, err = h.repo.ListByTenantMembership(r.Context(), tenantID, membership.ID, from, to)
+	} else {
+		items, err = h.repo.ListByTenant(r.Context(), tenantID, from, to)
+	}
 	if err != nil {
 		httpapi.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "failed to load tenant bookings"})
 		return
@@ -176,6 +192,9 @@ func (h *handler) getTenant(w http.ResponseWriter, r *http.Request) {
 	}
 	bookingID, ok := endpointutil.ParseUUIDParam(w, r, "bookingId")
 	if !ok {
+		return
+	}
+	if !h.ensureStaffOwnBooking(w, r, tenantID, bookingID) {
 		return
 	}
 	item, err := h.repo.GetByTenant(r.Context(), bookingID, tenantID)
@@ -195,6 +214,9 @@ func (h *handler) updateTenant(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !h.ensureStaffOwnBooking(w, r, tenantID, bookingID) {
+		return
+	}
 	var req updateTenantBookingRequest
 	if !httpapi.DecodeJSON(w, r, &req) {
 		return
@@ -209,4 +231,29 @@ func (h *handler) updateTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpapi.WriteJSON(w, http.StatusOK, item)
+}
+
+func (h *handler) ensureStaffOwnBooking(w http.ResponseWriter, r *http.Request, tenantID, bookingID uuid.UUID) bool {
+	userID, ok := endpointutil.CurrentUserID(w, r)
+	if !ok {
+		return false
+	}
+	membership, err := h.memberSvc.CheckMembership(r.Context(), userID, tenantID)
+	if err != nil {
+		httpapi.WriteJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "user is not a member of this tenant"})
+		return false
+	}
+	if membership.Role != tenant_memberships.RoleTenantStaff {
+		return true
+	}
+	ok, err = h.repo.BookingBelongsToMembership(r.Context(), bookingID, tenantID, membership.ID)
+	if err != nil {
+		httpapi.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "failed to validate booking scope"})
+		return false
+	}
+	if !ok {
+		httpapi.WriteJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "staff can only access their own calendar"})
+		return false
+	}
+	return true
 }

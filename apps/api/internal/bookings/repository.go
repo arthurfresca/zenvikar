@@ -198,19 +198,34 @@ func (r *Repository) GetByTenant(ctx context.Context, bookingID, tenantID uuid.U
 
 // ListByTenant returns bookings in tenant scope.
 func (r *Repository) ListByTenant(ctx context.Context, tenantID uuid.UUID, from, to *time.Time) ([]Booking, error) {
+	return r.listByTenant(ctx, tenantID, nil, from, to)
+}
+
+// ListByTenantMembership returns bookings in tenant scope limited to one membership's service members.
+func (r *Repository) ListByTenantMembership(ctx context.Context, tenantID, membershipID uuid.UUID, from, to *time.Time) ([]Booking, error) {
+	return r.listByTenant(ctx, tenantID, &membershipID, from, to)
+}
+
+func (r *Repository) listByTenant(ctx context.Context, tenantID uuid.UUID, membershipID *uuid.UUID, from, to *time.Time) ([]Booking, error) {
 	query := `
 		SELECT id, tenant_id, service_member_id, customer_id, price_cents, start_time, end_time, status, created_at, updated_at
-		FROM bookings WHERE tenant_id = $1`
+		FROM bookings b`
 	args := []any{tenantID}
+	if membershipID != nil {
+		query += ` JOIN service_members sm ON sm.id = b.service_member_id WHERE b.tenant_id = $1 AND sm.membership_id = $2`
+		args = append(args, *membershipID)
+	} else {
+		query += ` WHERE b.tenant_id = $1`
+	}
 	if from != nil {
-		query += ` AND end_time >= $2`
+		query += fmt.Sprintf(" AND b.end_time >= $%d", len(args)+1)
 		args = append(args, *from)
 	}
 	if to != nil {
-		query += fmt.Sprintf(" AND start_time <= $%d", len(args)+1)
+		query += fmt.Sprintf(" AND b.start_time <= $%d", len(args)+1)
 		args = append(args, *to)
 	}
-	query += ` ORDER BY start_time DESC`
+	query += ` ORDER BY b.start_time DESC`
 	return r.list(ctx, query, args...)
 }
 
@@ -227,6 +242,23 @@ func (r *Repository) UpdateStatusInTenant(ctx context.Context, bookingID, tenant
 		return nil, ErrNotFound
 	}
 	return r.GetByTenant(ctx, bookingID, tenantID)
+}
+
+// BookingBelongsToMembership reports whether a booking is assigned to one of the membership's service members.
+func (r *Repository) BookingBelongsToMembership(ctx context.Context, bookingID, tenantID, membershipID uuid.UUID) (bool, error) {
+	var ok bool
+	err := r.db.QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1
+			FROM bookings b
+			JOIN service_members sm ON sm.id = b.service_member_id
+			WHERE b.id = $1 AND b.tenant_id = $2 AND sm.membership_id = $3
+		)
+	`, bookingID, tenantID, membershipID).Scan(&ok)
+	if err != nil {
+		return false, fmt.Errorf("checking booking ownership: %w", err)
+	}
+	return ok, nil
 }
 
 func (r *Repository) getOne(ctx context.Context, query string, args ...any) (*Booking, error) {

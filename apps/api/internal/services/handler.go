@@ -10,6 +10,7 @@ import (
 	"github.com/zenvikar/api/internal/platform/authz"
 	"github.com/zenvikar/api/internal/platform/endpointutil"
 	"github.com/zenvikar/api/internal/platform/httpapi"
+	"github.com/zenvikar/api/internal/tenant_memberships"
 	"github.com/zenvikar/api/internal/tenants"
 )
 
@@ -17,10 +18,11 @@ type handler struct {
 	repo      *Repository
 	tenantSvc *tenants.Service
 	authzSvc  *authz.Service
+	memberSvc *tenant_memberships.Service
 }
 
-func newHandler(repo *Repository, tenantSvc *tenants.Service, authzSvc *authz.Service) *handler {
-	return &handler{repo: repo, tenantSvc: tenantSvc, authzSvc: authzSvc}
+func newHandler(repo *Repository, tenantSvc *tenants.Service, authzSvc *authz.Service, memberSvc *tenant_memberships.Service) *handler {
+	return &handler{repo: repo, tenantSvc: tenantSvc, authzSvc: authzSvc, memberSvc: memberSvc}
 }
 
 func (h *handler) register(router chi.Router, requireAuth func(http.Handler) http.Handler) {
@@ -210,7 +212,21 @@ func (h *handler) listMembers(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	items, err := h.repo.ListMembers(r.Context(), tenantID, serviceID)
+	userID, ok := endpointutil.CurrentUserID(w, r)
+	if !ok {
+		return
+	}
+	membership, err := h.memberSvc.CheckMembership(r.Context(), userID, tenantID)
+	if err != nil {
+		httpapi.WriteJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "user is not a member of this tenant"})
+		return
+	}
+	var items []ServiceMemberDetails
+	if membership.Role == tenant_memberships.RoleTenantStaff {
+		items, err = h.repo.ListMembersByMembership(r.Context(), tenantID, serviceID, membership.ID)
+	} else {
+		items, err = h.repo.ListMembers(r.Context(), tenantID, serviceID)
+	}
 	if err != nil {
 		httpapi.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "failed to load service members"})
 		return

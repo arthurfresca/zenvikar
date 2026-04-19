@@ -6,15 +6,18 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"github.com/zenvikar/api/internal/platform/authz"
 	"github.com/zenvikar/api/internal/platform/endpointutil"
 	"github.com/zenvikar/api/internal/platform/httpapi"
+	"github.com/zenvikar/api/internal/tenant_memberships"
 )
 
 type handler struct {
-	repo     *Repository
-	authzSvc *authz.Service
+	repo      *Repository
+	authzSvc  *authz.Service
+	memberSvc *tenant_memberships.Service
 }
 
 type upsertOpeningHourRequest struct {
@@ -28,8 +31,8 @@ type createBlockedDateRequest struct {
 	Reason *string `json:"reason"`
 }
 
-func newHandler(repo *Repository, authzSvc *authz.Service) *handler {
-	return &handler{repo: repo, authzSvc: authzSvc}
+func newHandler(repo *Repository, authzSvc *authz.Service, memberSvc *tenant_memberships.Service) *handler {
+	return &handler{repo: repo, authzSvc: authzSvc, memberSvc: memberSvc}
 }
 
 func (h *handler) register(router chi.Router, requireAuth func(http.Handler) http.Handler) {
@@ -72,6 +75,9 @@ func (h *handler) listOpeningHours(w http.ResponseWriter, r *http.Request) {
 	}
 	serviceMemberID, ok := endpointutil.ParseUUIDParam(w, r, "serviceMemberId")
 	if !ok {
+		return
+	}
+	if !h.ensureStaffOwnServiceMember(w, r, tenantID, serviceMemberID) {
 		return
 	}
 	items, err := h.repo.ListOpeningHours(r.Context(), tenantID, serviceMemberID)
@@ -127,12 +133,60 @@ func (h *handler) listBlockedDates(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if !h.ensureStaffOwnMembership(w, r, tenantID, membershipID) {
+		return
+	}
 	items, err := h.repo.ListBlockedDates(r.Context(), tenantID, membershipID)
 	if err != nil {
 		httpapi.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "failed to load blocked dates"})
 		return
 	}
 	httpapi.WriteJSON(w, http.StatusOK, map[string]any{"blockedDates": items})
+}
+
+func (h *handler) ensureStaffOwnServiceMember(w http.ResponseWriter, r *http.Request, tenantID, serviceMemberID uuid.UUID) bool {
+	userID, ok := endpointutil.CurrentUserID(w, r)
+	if !ok {
+		return false
+	}
+	membership, err := h.memberSvc.CheckMembership(r.Context(), userID, tenantID)
+	if err != nil {
+		httpapi.WriteJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "user is not a member of this tenant"})
+		return false
+	}
+	if membership.Role != tenant_memberships.RoleTenantStaff {
+		return true
+	}
+	ok, err = h.repo.ServiceMemberBelongsToMembership(r.Context(), tenantID, serviceMemberID, membership.ID)
+	if err != nil {
+		httpapi.WriteJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal_error", "message": "failed to validate service member scope"})
+		return false
+	}
+	if !ok {
+		httpapi.WriteJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "staff can only access their own calendar"})
+		return false
+	}
+	return true
+}
+
+func (h *handler) ensureStaffOwnMembership(w http.ResponseWriter, r *http.Request, tenantID, membershipID uuid.UUID) bool {
+	userID, ok := endpointutil.CurrentUserID(w, r)
+	if !ok {
+		return false
+	}
+	membership, err := h.memberSvc.CheckMembership(r.Context(), userID, tenantID)
+	if err != nil {
+		httpapi.WriteJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "user is not a member of this tenant"})
+		return false
+	}
+	if membership.Role != tenant_memberships.RoleTenantStaff {
+		return true
+	}
+	if membership.ID != membershipID {
+		httpapi.WriteJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "staff can only access their own calendar"})
+		return false
+	}
+	return true
 }
 
 func (h *handler) createBlockedDate(w http.ResponseWriter, r *http.Request) {

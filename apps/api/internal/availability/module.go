@@ -29,7 +29,7 @@ func (m *AvailabilityModule) RegisterRoutes(router chi.Router, deps platform.Dep
 	repo := NewRepository(deps.DB)
 	membershipSvc := tenant_memberships.NewService(tenant_memberships.NewRepository(deps.DB))
 	authzSvc := authz.NewService(authz.NewPlatformAdminChecker(deps.DB), membershipSvc)
-	h := newHandler(repo, authzSvc)
+	h := newHandler(repo, authzSvc, membershipSvc)
 	h.register(router, authn.RequireAuth(deps.Config.JWTSecret, deps.Config.JWTTTLMinutes))
 }
 

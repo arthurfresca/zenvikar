@@ -78,7 +78,12 @@ paths:
     get:
       tags: [Tenant Availability]
       summary: List opening hours for a service member
-      description: Lists the weekly opening-hour rules that drive public slot generation. Requires `availability:read`.
+      description: |
+        Lists the weekly opening-hour rules that drive public slot generation. Requires `availability:read`.
+
+        Visibility rules:
+        - `tenant_owner` and `tenant_manager` can read calendars for any tenant member.
+        - `tenant_staff` can only read opening hours for their own service-member entries.
       operationId: listOpeningHours
       security:
         - bearerAuth: []
@@ -204,7 +209,12 @@ paths:
     get:
       tags: [Tenant Availability]
       summary: List blocked dates for a membership
-      description: Lists full-day time-off records that block every service handled by that membership. Requires `availability:read`.
+      description: |
+        Lists full-day time-off records that block every service handled by that membership. Requires `availability:read`.
+
+        Visibility rules:
+        - `tenant_owner` and `tenant_manager` can read blocked dates for any tenant membership.
+        - `tenant_staff` can only read blocked dates for their own membership.
       operationId: listBlockedDates
       security:
         - bearerAuth: []

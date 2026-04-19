@@ -31,7 +31,7 @@ func (m *ServicesModule) RegisterRoutes(router chi.Router, deps platform.Depende
 	tenantSvc := tenants.NewService(tenants.NewRepository(deps.DB), deps.Redis)
 	membershipSvc := tenant_memberships.NewService(tenant_memberships.NewRepository(deps.DB))
 	authzSvc := authz.NewService(authz.NewPlatformAdminChecker(deps.DB), membershipSvc)
-	h := newHandler(repo, tenantSvc, authzSvc)
+	h := newHandler(repo, tenantSvc, authzSvc, membershipSvc)
 	h.register(router, authn.RequireAuth(deps.Config.JWTSecret, deps.Config.JWTTTLMinutes))
 }
 

@@ -257,16 +257,31 @@ func (r *Repository) Delete(ctx context.Context, tenantID, serviceID uuid.UUID) 
 
 // ListMembers returns service-member assignments in tenant scope.
 func (r *Repository) ListMembers(ctx context.Context, tenantID, serviceID uuid.UUID) ([]ServiceMemberDetails, error) {
-	rows, err := r.db.QueryContext(ctx, `
+	return r.listMembers(ctx, tenantID, serviceID, nil)
+}
+
+// ListMembersByMembership returns service-member assignments for one membership in tenant scope.
+func (r *Repository) ListMembersByMembership(ctx context.Context, tenantID, serviceID, membershipID uuid.UUID) ([]ServiceMemberDetails, error) {
+	return r.listMembers(ctx, tenantID, serviceID, &membershipID)
+}
+
+func (r *Repository) listMembers(ctx context.Context, tenantID, serviceID uuid.UUID, membershipID *uuid.UUID) ([]ServiceMemberDetails, error) {
+	query := `
 		SELECT sm.id, sm.service_id, sm.membership_id, sm.price_cents, sm.description,
 		       u.name, u.email
 		FROM service_members sm
 		JOIN tenant_memberships tm ON tm.id = sm.membership_id
 		JOIN users u ON u.id = tm.user_id
 		JOIN services s ON s.id = sm.service_id
-		WHERE s.tenant_id = $1 AND sm.service_id = $2
-		ORDER BY u.name ASC
-	`, tenantID, serviceID)
+		WHERE s.tenant_id = $1 AND sm.service_id = $2`
+	args := []any{tenantID, serviceID}
+	if membershipID != nil {
+		query += ` AND sm.membership_id = $3`
+		args = append(args, *membershipID)
+	}
+	query += ` ORDER BY u.name ASC`
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("listing service members: %w", err)
 	}

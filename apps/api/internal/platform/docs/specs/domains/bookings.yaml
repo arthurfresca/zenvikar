@@ -174,7 +174,12 @@ paths:
     get:
       tags: [Tenant Bookings]
       summary: List bookings in tenant scope
-      description: Lists bookings for a tenant with optional RFC3339 `from` and `to` range filters. Requires `bookings:read`.
+      description: |
+        Lists bookings for a tenant with optional RFC3339 `from` and `to` range filters. Requires `bookings:read`.
+
+        Visibility rules:
+        - `tenant_owner` and `tenant_manager` can see bookings for all tenant members.
+        - `tenant_staff` can only see bookings assigned to their own calendar.
       operationId: listTenantBookings
       security:
         - bearerAuth: []
@@ -238,7 +243,12 @@ paths:
     get:
       tags: [Tenant Bookings]
       summary: Get one booking in tenant scope
-      description: Loads one booking for tenant operations. Requires `bookings:read`.
+      description: |
+        Loads one booking for tenant operations. Requires `bookings:read`.
+
+        Visibility rules:
+        - `tenant_owner` and `tenant_manager` can read any booking in the tenant.
+        - `tenant_staff` can only read bookings assigned to their own calendar.
       operationId: getTenantBooking
       security:
         - bearerAuth: []
@@ -276,7 +286,12 @@ paths:
     patch:
       tags: [Tenant Bookings]
       summary: Update booking status in tenant scope
-      description: Updates the booking status to `pending`, `confirmed`, or `cancelled`. Requires `bookings:update`.
+      description: |
+        Updates the booking status to `pending`, `confirmed`, or `cancelled`. Requires `bookings:update`.
+
+        Visibility rules:
+        - `tenant_owner` and `tenant_manager` can update any booking in the tenant.
+        - `tenant_staff` can only update bookings assigned to their own calendar.
       operationId: updateTenantBooking
       security:
         - bearerAuth: []

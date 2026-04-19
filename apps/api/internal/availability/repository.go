@@ -79,6 +79,23 @@ func (r *Repository) ListOpeningHours(ctx context.Context, tenantID, serviceMemb
 	return out, rows.Err()
 }
 
+// ServiceMemberBelongsToMembership reports whether the service member belongs to the given tenant membership.
+func (r *Repository) ServiceMemberBelongsToMembership(ctx context.Context, tenantID, serviceMemberID, membershipID uuid.UUID) (bool, error) {
+	var ok bool
+	err := r.db.QueryRowContext(ctx, `
+		SELECT EXISTS(
+			SELECT 1
+			FROM service_members sm
+			JOIN services s ON s.id = sm.service_id
+			WHERE s.tenant_id = $1 AND sm.id = $2 AND sm.membership_id = $3
+		)
+	`, tenantID, serviceMemberID, membershipID).Scan(&ok)
+	if err != nil {
+		return false, fmt.Errorf("checking service member ownership: %w", err)
+	}
+	return ok, nil
+}
+
 func (r *Repository) UpsertOpeningHour(ctx context.Context, tenantID, serviceMemberID uuid.UUID, dayOfWeek int, openTime, closeTime string, enabled bool) (*OpeningHours, error) {
 	var ok bool
 	err := r.db.QueryRowContext(ctx, `
