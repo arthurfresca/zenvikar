@@ -54,7 +54,7 @@ func (h *handler) listPublic(w http.ResponseWriter, r *http.Request) {
 		httpapi.WriteJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_request", "message": "date query parameter is required in YYYY-MM-DD format"})
 		return
 	}
-	slots, err := h.repo.ListPublicSlots(r.Context(), chi.URLParam(r, "tenantSlug"), serviceMemberID, day)
+	times, err := h.repo.ListPublicTimes(r.Context(), chi.URLParam(r, "tenantSlug"), serviceMemberID, day)
 	if err != nil {
 		status := http.StatusInternalServerError
 		message := "failed to load availability"
@@ -65,7 +65,7 @@ func (h *handler) listPublic(w http.ResponseWriter, r *http.Request) {
 		httpapi.WriteJSON(w, status, map[string]string{"error": "not_found", "message": message})
 		return
 	}
-	httpapi.WriteJSON(w, http.StatusOK, map[string]any{"date": day.Format("2006-01-02"), "slots": slots})
+	httpapi.WriteJSON(w, http.StatusOK, map[string]any{"date": day.Format("2006-01-02"), "times": times})
 }
 
 func (h *handler) listOpeningHours(w http.ResponseWriter, r *http.Request) {

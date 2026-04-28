@@ -27,3 +27,12 @@ type Booking struct {
 	CreatedAt       time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt       time.Time `json:"updatedAt" db:"updated_at"`
 }
+
+// BookingDetails enriches tenant-side booking responses with joined display data.
+type BookingDetails struct {
+	Booking
+	CustomerName  string `json:"customerName"`
+	CustomerEmail string `json:"customerEmail"`
+	MemberName    string `json:"memberName"`
+	ServiceName   string `json:"serviceName"`
+}

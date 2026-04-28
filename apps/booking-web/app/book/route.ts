@@ -40,8 +40,13 @@ export async function POST(request: NextRequest) {
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    appendResult(returnTo, "bookingError", errorText ? "booking_failed" : "booking_failed");
+    if (response.status === 401 || response.status === 403) {
+      const loginURL = new URL("/login", request.url);
+      loginURL.searchParams.set("reauth", "1");
+      loginURL.searchParams.set("next", `${returnTo.pathname}${returnTo.search}`);
+      return NextResponse.redirect(loginURL);
+    }
+    appendResult(returnTo, "bookingError", "booking_failed");
     return NextResponse.redirect(returnTo);
   }
 

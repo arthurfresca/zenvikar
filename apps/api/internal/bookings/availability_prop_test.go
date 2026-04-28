@@ -158,7 +158,7 @@ func TestProperty7_OutsideHoursBookingRejection(t *testing.T) {
 }
 
 // TestProperty8_BookingOverlapRejectionWithBuffers verifies that booking requests
-// overlapping existing bookings (including buffer times) are rejected with "slot_taken".
+// overlapping existing bookings (including buffer times) are rejected with "time_taken".
 //
 // **Validates: Requirements 7.3, 7.5**
 func TestProperty8_BookingOverlapRejectionWithBuffers(t *testing.T) {
@@ -243,8 +243,8 @@ func TestProperty8_BookingOverlapRejectionWithBuffers(t *testing.T) {
 				existingStart, existingEnd, effStart, effEnd,
 				svc.BufferBefore, svc.BufferAfter)
 		}
-		if result.Reason != "slot_taken" {
-			t.Fatalf("expected reason 'slot_taken', got %q", result.Reason)
+		if result.Reason != "time_taken" {
+			t.Fatalf("expected reason 'time_taken', got %q", result.Reason)
 		}
 	})
 }
@@ -296,7 +296,7 @@ func TestProperty9_BookingEndTimeCalculation(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if !result.Available {
-			t.Fatalf("expected available=true for valid slot, got reason=%q", result.Reason)
+			t.Fatalf("expected available=true, got reason=%q", result.Reason)
 		}
 		if !result.EndTime.Equal(expectedEnd) {
 			t.Fatalf("end_time mismatch: got %v, want %v (start=%v, duration=%d)",

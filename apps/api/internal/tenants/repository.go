@@ -14,19 +14,18 @@ var ErrNotFound = fmt.Errorf("not found")
 
 // UpdateTenantInput holds optional tenant updates.
 type UpdateTenantInput struct {
-	DisplayName         *string
-	LogoURL             **string
-	ColorPrimary        *string
-	ColorSecondary      *string
-	ColorAccent         *string
-	Phone               **string
-	Email               **string
-	Address             **string
-	Currency            *string
-	SlotIntervalMinutes *int
-	Timezone            *string
-	DefaultLocale       *string
-	Enabled             *bool
+	DisplayName    *string
+	LogoURL        **string
+	ColorPrimary   *string
+	ColorSecondary *string
+	ColorAccent    *string
+	Phone          **string
+	Email          **string
+	Address        **string
+	Currency       *string
+	Timezone       *string
+	DefaultLocale  *string
+	Enabled        *bool
 }
 
 // Repository provides data access for tenants.
@@ -40,20 +39,19 @@ func NewRepository(db *sql.DB) *Repository {
 }
 
 // FindBySlug retrieves a tenant by its slug.
-// Returns the tenant or an error if not found or a database error occurs.
 func (r *Repository) FindBySlug(ctx context.Context, slug string) (*Tenant, error) {
 	var t Tenant
 	var logoURL, phone, email, address sql.NullString
 
 	err := r.db.QueryRowContext(ctx,
 		`SELECT id, slug, display_name, logo_url, color_primary, color_secondary,
-		        color_accent, phone, email, address, currency, slot_interval_minutes,
+		        color_accent, phone, email, address, currency,
 		        timezone, default_locale, enabled, created_at, updated_at
 		 FROM tenants WHERE slug = $1`, slug,
 	).Scan(
 		&t.ID, &t.Slug, &t.DisplayName, &logoURL,
 		&t.ColorPrimary, &t.ColorSecondary, &t.ColorAccent,
-		&phone, &email, &address, &t.Currency, &t.SlotIntervalMinutes,
+		&phone, &email, &address, &t.Currency,
 		&t.Timezone, &t.DefaultLocale, &t.Enabled,
 		&t.CreatedAt, &t.UpdatedAt,
 	)
@@ -86,12 +84,12 @@ func (r *Repository) FindByID(ctx context.Context, tenantID uuid.UUID) (*Tenant,
 	var logoURL, phone, email, address sql.NullString
 	err := r.db.QueryRowContext(ctx, `
 		SELECT id, slug, display_name, logo_url, color_primary, color_secondary,
-		       color_accent, phone, email, address, currency, slot_interval_minutes,
+		       color_accent, phone, email, address, currency,
 		       timezone, default_locale, enabled, created_at, updated_at
 		FROM tenants WHERE id = $1
 	`, tenantID).Scan(
 		&t.ID, &t.Slug, &t.DisplayName, &logoURL, &t.ColorPrimary, &t.ColorSecondary,
-		&t.ColorAccent, &phone, &email, &address, &t.Currency, &t.SlotIntervalMinutes,
+		&t.ColorAccent, &phone, &email, &address, &t.Currency,
 		&t.Timezone, &t.DefaultLocale, &t.Enabled, &t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
@@ -148,9 +146,6 @@ func (r *Repository) Update(ctx context.Context, tenantID uuid.UUID, input Updat
 	if input.Currency != nil {
 		current.Currency = *input.Currency
 	}
-	if input.SlotIntervalMinutes != nil {
-		current.SlotIntervalMinutes = *input.SlotIntervalMinutes
-	}
 	if input.Timezone != nil {
 		current.Timezone = *input.Timezone
 	}
@@ -179,9 +174,11 @@ func (r *Repository) Update(ctx context.Context, tenantID uuid.UUID, input Updat
 		UPDATE tenants
 		SET display_name = $2, logo_url = $3, color_primary = $4, color_secondary = $5,
 		    color_accent = $6, phone = $7, email = $8, address = $9, currency = $10,
-		    slot_interval_minutes = $11, timezone = $12, default_locale = $13, enabled = $14, updated_at = $15
+		    timezone = $11, default_locale = $12, enabled = $13, updated_at = $14
 		WHERE id = $1
-	`, tenantID, current.DisplayName, logoURL, current.ColorPrimary, current.ColorSecondary, current.ColorAccent, phone, email, address, current.Currency, current.SlotIntervalMinutes, current.Timezone, current.DefaultLocale, current.Enabled, current.UpdatedAt)
+	`, tenantID, current.DisplayName, logoURL, current.ColorPrimary, current.ColorSecondary,
+		current.ColorAccent, phone, email, address, current.Currency,
+		current.Timezone, current.DefaultLocale, current.Enabled, current.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("updating tenant: %w", err)
 	}

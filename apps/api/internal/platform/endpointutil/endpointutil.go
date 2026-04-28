@@ -2,6 +2,7 @@ package endpointutil
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -38,8 +39,62 @@ func CurrentUserID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	return userID, true
 }
 
+// CurrentClaims returns parsed auth claims or writes a 401 response.
+func CurrentClaims(w http.ResponseWriter, r *http.Request) (*authn.Claims, bool) {
+	claims := authn.ClaimsFromContext(r.Context())
+	if claims == nil {
+		httpapi.WriteJSON(w, http.StatusUnauthorized, map[string]string{
+			"error":   "unauthorized",
+			"message": "invalid or expired token",
+		})
+		return nil, false
+	}
+	return claims, true
+}
+
+// RequireCurrentTenantID checks that the current token is scoped to the requested tenant.
+func RequireCurrentTenantID(w http.ResponseWriter, r *http.Request, tenantID uuid.UUID) bool {
+	claims, ok := CurrentClaims(w, r)
+	if !ok {
+		return false
+	}
+	if strings.TrimSpace(claims.CurrentTenantID) == "" {
+		return true
+	}
+	if claims.CurrentTenantID != tenantID.String() {
+		httpapi.WriteJSON(w, http.StatusForbidden, map[string]string{
+			"error":   "forbidden",
+			"message": "session is scoped to a different tenant",
+		})
+		return false
+	}
+	return true
+}
+
+// RequireCurrentTenantSlug checks that the current token is scoped to the requested tenant slug.
+func RequireCurrentTenantSlug(w http.ResponseWriter, r *http.Request, tenantSlug string) bool {
+	claims, ok := CurrentClaims(w, r)
+	if !ok {
+		return false
+	}
+	if strings.TrimSpace(claims.CurrentTenantSlug) == "" {
+		return true
+	}
+	if !strings.EqualFold(claims.CurrentTenantSlug, strings.TrimSpace(tenantSlug)) {
+		httpapi.WriteJSON(w, http.StatusForbidden, map[string]string{
+			"error":   "forbidden",
+			"message": "session is scoped to a different tenant",
+		})
+		return false
+	}
+	return true
+}
+
 // RequireTenantPermission checks the tenant permission for the current user.
 func RequireTenantPermission(w http.ResponseWriter, r *http.Request, authzSvc *authz.Service, tenantID uuid.UUID, permission string) bool {
+	if !RequireCurrentTenantID(w, r, tenantID) {
+		return false
+	}
 	userID, ok := CurrentUserID(w, r)
 	if !ok {
 		return false

@@ -16,19 +16,18 @@ type handler struct {
 }
 
 type updateTenantRequest struct {
-	DisplayName         *string `json:"displayName"`
-	LogoURL             *string `json:"logoUrl"`
-	ColorPrimary        *string `json:"colorPrimary"`
-	ColorSecondary      *string `json:"colorSecondary"`
-	ColorAccent         *string `json:"colorAccent"`
-	Phone               *string `json:"phone"`
-	Email               *string `json:"email"`
-	Address             *string `json:"address"`
-	Currency            *string `json:"currency"`
-	SlotIntervalMinutes *int    `json:"slotIntervalMinutes"`
-	Timezone            *string `json:"timezone"`
-	DefaultLocale       *string `json:"defaultLocale"`
-	Enabled             *bool   `json:"enabled"`
+	DisplayName    *string `json:"displayName"`
+	LogoURL        *string `json:"logoUrl"`
+	ColorPrimary   *string `json:"colorPrimary"`
+	ColorSecondary *string `json:"colorSecondary"`
+	ColorAccent    *string `json:"colorAccent"`
+	Phone          *string `json:"phone"`
+	Email          *string `json:"email"`
+	Address        *string `json:"address"`
+	Currency       *string `json:"currency"`
+	Timezone       *string `json:"timezone"`
+	DefaultLocale  *string `json:"defaultLocale"`
+	Enabled        *bool   `json:"enabled"`
 }
 
 func newHandler(svc *Service, authzSvc *authz.Service) *handler {
@@ -82,19 +81,18 @@ func (h *handler) update(w http.ResponseWriter, r *http.Request) {
 		address = &req.Address
 	}
 	tenant, err := h.svc.Update(r.Context(), tenantID, UpdateTenantInput{
-		DisplayName:         req.DisplayName,
-		LogoURL:             logoURL,
-		ColorPrimary:        req.ColorPrimary,
-		ColorSecondary:      req.ColorSecondary,
-		ColorAccent:         req.ColorAccent,
-		Phone:               phone,
-		Email:               email,
-		Address:             address,
-		Currency:            req.Currency,
-		SlotIntervalMinutes: req.SlotIntervalMinutes,
-		Timezone:            req.Timezone,
-		DefaultLocale:       req.DefaultLocale,
-		Enabled:             req.Enabled,
+		DisplayName:    req.DisplayName,
+		LogoURL:        logoURL,
+		ColorPrimary:   req.ColorPrimary,
+		ColorSecondary: req.ColorSecondary,
+		ColorAccent:    req.ColorAccent,
+		Phone:          phone,
+		Email:          email,
+		Address:        address,
+		Currency:       req.Currency,
+		Timezone:       req.Timezone,
+		DefaultLocale:  req.DefaultLocale,
+		Enabled:        req.Enabled,
 	})
 	if err != nil {
 		status := http.StatusInternalServerError

@@ -15,7 +15,7 @@ import (
 
 // Service-level errors.
 var (
-	ErrSlotUnavailable = errors.New("slot_unavailable")
+	ErrTimeUnavailable = errors.New("time_unavailable")
 )
 
 // CreateBookingRequest holds the data needed to create a booking.
@@ -32,7 +32,6 @@ type AvailabilityDataLoader interface {
 	GetExistingBookings(ctx context.Context, serviceMemberID uuid.UUID, rangeStart, rangeEnd time.Time) ([]Booking, error)
 	GetServiceByMember(ctx context.Context, serviceMemberID uuid.UUID) (*services.Service, error)
 	GetServiceMemberPrice(ctx context.Context, serviceMemberID uuid.UUID) (int, error)
-	GetSlotIntervalMinutes(ctx context.Context, tenantID uuid.UUID) (int, error)
 }
 
 // BookingService handles booking creation with availability checking.
@@ -76,18 +75,13 @@ func (s *BookingService) CreateBooking(
 		return nil, fmt.Errorf("loading existing bookings: %w", err)
 	}
 
-	slotInterval, err := s.loader.GetSlotIntervalMinutes(ctx, tenantID)
-	if err != nil {
-		return nil, fmt.Errorf("loading slot interval: %w", err)
-	}
-
-	result, err := CheckAvailability(blockedDates, openingHours, existingBookings, *svc, req.StartTime, slotInterval)
+	result, err := CheckAvailability(blockedDates, openingHours, existingBookings, *svc, req.StartTime, 15)
 	if err != nil {
 		return nil, fmt.Errorf("checking availability: %w", err)
 	}
 
 	if !result.Available {
-		return nil, fmt.Errorf("%w: %s", ErrSlotUnavailable, result.Reason)
+		return nil, fmt.Errorf("%w: %s", ErrTimeUnavailable, result.Reason)
 	}
 
 	priceCents, err := s.loader.GetServiceMemberPrice(ctx, req.ServiceMemberID)

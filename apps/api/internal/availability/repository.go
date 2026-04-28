@@ -19,7 +19,7 @@ type serviceMemberContext struct {
 	DurationMinutes int
 	BufferBefore    int
 	BufferAfter     int
-	SlotInterval    int
+	Interval        int
 	Timezone        string
 }
 
@@ -29,13 +29,13 @@ type existingBookingWindow struct {
 	Status    string
 }
 
-// AvailableSlot is a public booking slot for a service member.
-type AvailableSlot struct {
+// AvailableTime is a bookable time window for a service member.
+type AvailableTime struct {
 	StartTime time.Time `json:"startTime"`
 	EndTime   time.Time `json:"endTime"`
 }
 
-// Repository provides availability persistence and slot computation.
+// Repository provides availability persistence.
 type Repository struct {
 	db *sql.DB
 }
@@ -45,13 +45,13 @@ func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db}
 }
 
-// ListPublicSlots returns bookable slots for a service member on a date.
-func (r *Repository) ListPublicSlots(ctx context.Context, tenantSlug string, serviceMemberID uuid.UUID, day time.Time) ([]AvailableSlot, error) {
+// ListPublicTimes returns bookable times for a service member on a date.
+func (r *Repository) ListPublicTimes(ctx context.Context, tenantSlug string, serviceMemberID uuid.UUID, day time.Time) ([]AvailableTime, error) {
 	ctxData, err := r.getServiceMemberContextBySlug(ctx, tenantSlug, serviceMemberID)
 	if err != nil {
 		return nil, err
 	}
-	return r.listSlotsForDay(ctx, ctxData, serviceMemberID, day)
+	return r.listTimesForDay(ctx, ctxData, serviceMemberID, day)
 }
 
 func (r *Repository) ListOpeningHours(ctx context.Context, tenantID, serviceMemberID uuid.UUID) ([]OpeningHours, error) {
@@ -211,7 +211,7 @@ func (r *Repository) getServiceMemberContextBySlug(ctx context.Context, tenantSl
 		JOIN tenants t ON t.id = s.tenant_id
 		WHERE t.slug = $1 AND t.enabled = true AND s.enabled = true AND sm.id = $2
 	`, tenantSlug, serviceMemberID).Scan(
-		&item.TenantID, &item.MembershipID, &item.ServiceID, &item.DurationMinutes, &item.BufferBefore, &item.BufferAfter, &item.SlotInterval, &item.Timezone,
+		&item.TenantID, &item.MembershipID, &item.ServiceID, &item.DurationMinutes, &item.BufferBefore, &item.BufferAfter, &item.Interval, &item.Timezone,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -222,7 +222,7 @@ func (r *Repository) getServiceMemberContextBySlug(ctx context.Context, tenantSl
 	return &item, nil
 }
 
-func (r *Repository) listSlotsForDay(ctx context.Context, data *serviceMemberContext, serviceMemberID uuid.UUID, day time.Time) ([]AvailableSlot, error) {
+func (r *Repository) listTimesForDay(ctx context.Context, data *serviceMemberContext, serviceMemberID uuid.UUID, day time.Time) ([]AvailableTime, error) {
 	dateOnly := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.UTC)
 	var blocked bool
 	err := r.db.QueryRowContext(ctx, `
@@ -232,7 +232,7 @@ func (r *Repository) listSlotsForDay(ctx context.Context, data *serviceMemberCon
 		return nil, fmt.Errorf("checking blocked dates: %w", err)
 	}
 	if blocked {
-		return []AvailableSlot{}, nil
+		return []AvailableTime{}, nil
 	}
 
 	var openTime, closeTime string
@@ -244,12 +244,12 @@ func (r *Repository) listSlotsForDay(ctx context.Context, data *serviceMemberCon
 	`, serviceMemberID, int(day.Weekday())).Scan(&openTime, &closeTime, &enabled)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return []AvailableSlot{}, nil
+			return []AvailableTime{}, nil
 		}
 		return nil, fmt.Errorf("loading opening hours: %w", err)
 	}
 	if !enabled {
-		return []AvailableSlot{}, nil
+		return []AvailableTime{}, nil
 	}
 
 	loc, err := time.LoadLocation(data.Timezone)
@@ -286,9 +286,9 @@ func (r *Repository) listSlotsForDay(ctx context.Context, data *serviceMemberCon
 		existing = append(existing, item)
 	}
 
-	step := time.Duration(data.SlotInterval) * time.Minute
+	step := time.Duration(data.Interval) * time.Minute
 	serviceDuration := time.Duration(data.DurationMinutes) * time.Minute
-	var slots []AvailableSlot
+	var times []AvailableTime
 	for candidate := openAt; !candidate.Add(serviceDuration).After(closeAt); candidate = candidate.Add(step) {
 		endAt := candidate.Add(serviceDuration)
 		effectiveStart := candidate.Add(-time.Duration(data.BufferBefore) * time.Minute)
@@ -301,10 +301,10 @@ func (r *Repository) listSlotsForDay(ctx context.Context, data *serviceMemberCon
 			}
 		}
 		if available {
-			slots = append(slots, AvailableSlot{StartTime: candidate.UTC(), EndTime: endAt.UTC()})
+			times = append(times, AvailableTime{StartTime: candidate.UTC(), EndTime: endAt.UTC()})
 		}
 	}
-	return slots, nil
+	return times, nil
 }
 
 func parseClockOnDate(timeOfDay string, day time.Time) (time.Time, error) {

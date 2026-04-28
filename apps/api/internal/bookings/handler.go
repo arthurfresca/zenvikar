@@ -56,9 +56,16 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	tenant, err := h.tenantSvc.ResolveTenantBySlug(r.Context(), strings.TrimSpace(chi.URLParam(r, "tenantSlug")))
+	tenantSlug := strings.TrimSpace(chi.URLParam(r, "tenantSlug"))
+	if !endpointutil.RequireCurrentTenantSlug(w, r, tenantSlug) {
+		return
+	}
+	tenant, err := h.tenantSvc.ResolveTenantBySlug(r.Context(), tenantSlug)
 	if err != nil {
 		httpapi.WriteJSON(w, http.StatusNotFound, map[string]string{"error": "tenant_not_found", "message": "No tenant found for this address"})
+		return
+	}
+	if !endpointutil.RequireCurrentTenantID(w, r, tenant.ID) {
 		return
 	}
 	var req createBookingRequest
@@ -84,11 +91,11 @@ func (h *handler) create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		status := http.StatusInternalServerError
 		message := "failed to create booking"
-		if errors.Is(err, ErrSlotUnavailable) {
+		if errors.Is(err, ErrTimeUnavailable) {
 			status = http.StatusConflict
-			message = "The requested time slot is no longer available"
+			message = "The requested time is no longer available"
 		}
-		httpapi.WriteJSON(w, status, map[string]string{"error": "slot_unavailable", "message": message})
+		httpapi.WriteJSON(w, status, map[string]string{"error": "time_unavailable", "message": message})
 		return
 	}
 	httpapi.WriteJSON(w, http.StatusCreated, booking)
@@ -172,7 +179,7 @@ func (h *handler) listTenant(w http.ResponseWriter, r *http.Request) {
 		httpapi.WriteJSON(w, http.StatusForbidden, map[string]string{"error": "forbidden", "message": "user is not a member of this tenant"})
 		return
 	}
-	var items []Booking
+	var items []BookingDetails
 	if membership.Role == tenant_memberships.RoleTenantStaff {
 		items, err = h.repo.ListByTenantMembership(r.Context(), tenantID, membership.ID, from, to)
 	} else {

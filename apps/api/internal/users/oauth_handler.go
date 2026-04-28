@@ -12,6 +12,9 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	appmiddleware "github.com/zenvikar/api/internal/platform/middleware"
+	"github.com/zenvikar/api/internal/tenants"
 )
 
 const (
@@ -23,10 +26,11 @@ const (
 )
 
 type oauthStatePayload struct {
-	Provider string `json:"provider"`
-	Redirect string `json:"redirect"`
-	Audience string `json:"audience"`
-	IssuedAt int64  `json:"iat"`
+	Provider   string `json:"provider"`
+	Redirect   string `json:"redirect"`
+	Audience   string `json:"audience"`
+	TenantSlug string `json:"tenantSlug,omitempty"`
+	IssuedAt   int64  `json:"iat"`
 }
 
 func (h *authHandler) googleOAuthStart(w http.ResponseWriter, r *http.Request) {
@@ -67,11 +71,16 @@ func (h *authHandler) oauthStart(w http.ResponseWriter, r *http.Request, provide
 		return
 	}
 
+	tenantSlug := oauthTenantSlug(redirectTo, h.cfg.BaseDomain)
+	if tenantSlug == "" && audience == oauthAudienceTenantWeb {
+		tenantSlug = strings.ToLower(strings.TrimSpace(r.URL.Query().Get("tenantSlug")))
+	}
 	state, err := h.encodeOAuthState(oauthStatePayload{
-		Provider: provider,
-		Redirect: redirectTo,
-		Audience: audience,
-		IssuedAt: time.Now().UTC().Unix(),
+		Provider:   provider,
+		Redirect:   redirectTo,
+		Audience:   audience,
+		TenantSlug: tenantSlug,
+		IssuedAt:   time.Now().UTC().Unix(),
 	})
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{
@@ -161,7 +170,7 @@ func (h *authHandler) oauthCallback(w http.ResponseWriter, r *http.Request, prov
 		return
 	}
 
-	result, err := h.svc.LoginSocial(r.Context(), input, state.Audience)
+	result, err := h.oauthLoginResult(r.Context(), input, state)
 	if err != nil {
 		http.Redirect(w, r, appendQueryString(state.Redirect, map[string]string{
 			oauthStateErrorKey: "social_login_failed",
@@ -173,6 +182,34 @@ func (h *authHandler) oauthCallback(w http.ResponseWriter, r *http.Request, prov
 		"authToken":     result.Token,
 		"authExpiresAt": result.ExpiresAt.UTC().Format(time.RFC3339Nano),
 	}), http.StatusFound)
+}
+
+func (h *authHandler) oauthLoginResult(ctx context.Context, input SocialLoginInput, state *oauthStatePayload) (*AuthResult, error) {
+	if strings.TrimSpace(state.TenantSlug) == "" {
+		return h.svc.LoginSocial(ctx, input, state.Audience)
+	}
+	if state.Audience == oauthAudienceTenantWeb {
+		return h.svc.LoginSocialTenant(ctx, input, state.TenantSlug)
+	}
+	return h.svc.LoginSocialBooking(ctx, input, state.TenantSlug)
+}
+
+func oauthTenantSlug(redirectTo, baseDomain string) string {
+	parsed, err := url.Parse(strings.TrimSpace(redirectTo))
+	if err != nil {
+		return ""
+	}
+	host := parsed.Hostname()
+	if host == "" {
+		return ""
+	}
+	if slug, err := appmiddleware.ExtractTenantSlugFromHost(host, baseDomain); err == nil {
+		normalized := strings.ToLower(strings.TrimSpace(slug))
+		if _, reserved := tenants.ReservedSlugs[normalized]; !reserved {
+			return normalized
+		}
+	}
+	return ""
 }
 
 type googleTokenExchangeResponse struct {

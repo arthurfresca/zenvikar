@@ -17,15 +17,17 @@ var (
 )
 
 type tokenClaims struct {
-	Issuer       string            `json:"iss"`
-	Subject      string            `json:"sub"`
-	Audience     string            `json:"aud"`
-	IssuedAt     int64             `json:"iat"`
-	ExpiresAt    int64             `json:"exp"`
-	Email        string            `json:"email"`
-	Name         string            `json:"name"`
-	PlatformRole string            `json:"platformRole,omitempty"`
-	TenantRoles  map[string]string `json:"tenantRoles,omitempty"`
+	Issuer            string            `json:"iss"`
+	Subject           string            `json:"sub"`
+	Audience          string            `json:"aud"`
+	IssuedAt          int64             `json:"iat"`
+	ExpiresAt         int64             `json:"exp"`
+	Email             string            `json:"email"`
+	Name              string            `json:"name"`
+	PlatformRole      string            `json:"platformRole,omitempty"`
+	TenantRoles       map[string]string `json:"tenantRoles,omitempty"`
+	CurrentTenantID   string            `json:"currentTenantId,omitempty"`
+	CurrentTenantSlug string            `json:"currentTenantSlug,omitempty"`
 }
 
 // TokenClaims exposes parsed auth claims outside the users package.
@@ -49,20 +51,22 @@ func NewTokenManager(secret string, ttlMinutes int) *TokenManager {
 }
 
 // IssueToken creates a signed auth token and returns token + expiry.
-func (tm *TokenManager) IssueToken(user *User, audience, platformRole string, tenantRoles map[string]string) (string, time.Time, error) {
+func (tm *TokenManager) IssueToken(user *User, audience, platformRole string, tenantRoles map[string]string, currentTenantID, currentTenantSlug string) (string, time.Time, error) {
 	now := time.Now().UTC()
 	exp := now.Add(tm.ttl)
 
 	claims := tokenClaims{
-		Issuer:       "zenvikar-api",
-		Subject:      user.ID.String(),
-		Audience:     audience,
-		IssuedAt:     now.Unix(),
-		ExpiresAt:    exp.Unix(),
-		Email:        user.Email,
-		Name:         user.Name,
-		PlatformRole: platformRole,
-		TenantRoles:  tenantRoles,
+		Issuer:            "zenvikar-api",
+		Subject:           user.ID.String(),
+		Audience:          audience,
+		IssuedAt:          now.Unix(),
+		ExpiresAt:         exp.Unix(),
+		Email:             user.Email,
+		Name:              user.Name,
+		PlatformRole:      platformRole,
+		TenantRoles:       tenantRoles,
+		CurrentTenantID:   strings.TrimSpace(currentTenantID),
+		CurrentTenantSlug: strings.TrimSpace(currentTenantSlug),
 	}
 
 	token, err := tm.sign(claims)

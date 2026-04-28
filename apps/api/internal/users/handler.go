@@ -74,6 +74,13 @@ func (h *authHandler) login(w http.ResponseWriter, r *http.Request) {
 		Email:    req.Email,
 		Password: req.Password,
 	}, "booking-web")
+	slug := resolveTenantSlug(r, h.cfg.BaseDomain)
+	if slug != "" {
+		result, err = h.svc.LoginBooking(r.Context(), EmailLoginInput{
+			Email:    req.Email,
+			Password: req.Password,
+		}, slug)
+	}
 	if err != nil {
 		writeAuthError(w, err)
 		return
@@ -94,6 +101,15 @@ func (h *authHandler) socialLogin(w http.ResponseWriter, r *http.Request) {
 		GoogleAccessToken:   req.GoogleAccessToken,
 		FacebookAccessToken: req.FacebookAccessToken,
 	}, "booking-web")
+	slug := resolveTenantSlug(r, h.cfg.BaseDomain)
+	if slug != "" {
+		result, err = h.svc.LoginSocialBooking(r.Context(), SocialLoginInput{
+			Provider:            req.Provider,
+			GoogleIDToken:       req.GoogleIDToken,
+			GoogleAccessToken:   req.GoogleAccessToken,
+			FacebookAccessToken: req.FacebookAccessToken,
+		}, slug)
+	}
 	if err != nil {
 		writeAuthError(w, err)
 		return
@@ -170,14 +186,16 @@ func (h *authHandler) me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"userId":       claims.Subject,
-		"email":        claims.Email,
-		"name":         claims.Name,
-		"audience":     claims.Audience,
-		"platformRole": claims.PlatformRole,
-		"tenantRoles":  claims.TenantRoles,
-		"issuedAt":     claims.IssuedAt,
-		"expiresAt":    claims.ExpiresAt,
+		"userId":            claims.Subject,
+		"email":             claims.Email,
+		"name":              claims.Name,
+		"audience":          claims.Audience,
+		"platformRole":      claims.PlatformRole,
+		"tenantRoles":       claims.TenantRoles,
+		"currentTenantId":   claims.CurrentTenantID,
+		"currentTenantSlug": claims.CurrentTenantSlug,
+		"issuedAt":          claims.IssuedAt,
+		"expiresAt":         claims.ExpiresAt,
 	})
 }
 

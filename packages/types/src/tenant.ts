@@ -10,7 +10,6 @@ export interface Tenant {
   email: string | null;
   address: string | null;
   currency: string;
-  slotIntervalMinutes: number;
   timezone: string;
   defaultLocale: "en" | "pt";
   enabled: boolean;

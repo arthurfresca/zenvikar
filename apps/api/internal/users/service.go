@@ -29,12 +29,14 @@ var (
 
 // AuthResult contains token + user profile returned by auth endpoints.
 type AuthResult struct {
-	Token        string            `json:"token"`
-	TokenType    string            `json:"tokenType"`
-	ExpiresAt    time.Time         `json:"expiresAt"`
-	User         *User             `json:"user"`
-	PlatformRole string            `json:"platformRole,omitempty"`
-	TenantRoles  map[string]string `json:"tenantRoles,omitempty"`
+	Token             string            `json:"token"`
+	TokenType         string            `json:"tokenType"`
+	ExpiresAt         time.Time         `json:"expiresAt"`
+	User              *User             `json:"user"`
+	PlatformRole      string            `json:"platformRole,omitempty"`
+	TenantRoles       map[string]string `json:"tenantRoles,omitempty"`
+	CurrentTenantID   string            `json:"currentTenantId,omitempty"`
+	CurrentTenantSlug string            `json:"currentTenantSlug,omitempty"`
 }
 
 // EmailSignupInput is used for email/password registration.
@@ -121,7 +123,7 @@ func (s *Service) SignupEmail(ctx context.Context, input EmailSignupInput) (*Aut
 		return nil, err
 	}
 
-	return s.issueAuthResult(ctx, user, "booking-web")
+	return s.issueAuthResult(ctx, user, "booking-web", nil)
 }
 
 // LoginEmail authenticates user credentials.
@@ -146,7 +148,20 @@ func (s *Service) LoginEmail(ctx context.Context, input EmailLoginInput, audienc
 		return nil, ErrInvalidCredentials
 	}
 
-	return s.issueAuthResult(ctx, user, audience)
+	return s.issueAuthResult(ctx, user, audience, nil)
+}
+
+// LoginBooking authenticates a booking-web user and scopes the session to a tenant.
+func (s *Service) LoginBooking(ctx context.Context, input EmailLoginInput, tenantSlug string) (*AuthResult, error) {
+	tenant, err := s.resolveTenantContext(ctx, tenantSlug)
+	if err != nil {
+		return nil, ErrAccessDenied
+	}
+	result, err := s.LoginEmail(ctx, input, "booking-web")
+	if err != nil {
+		return nil, err
+	}
+	return s.issueAuthResult(ctx, result.User, "booking-web", tenant)
 }
 
 // LoginSocial signs in or creates user with external provider identity.
@@ -162,7 +177,7 @@ func (s *Service) LoginSocial(ctx context.Context, input SocialLoginInput, audie
 
 	user, err := s.repo.FindUserByProvider(ctx, identity.Provider, identity.ProviderUserID)
 	if err == nil {
-		return s.issueAuthResult(ctx, user, audience)
+		return s.issueAuthResult(ctx, user, audience, nil)
 	}
 	if err != nil && !errors.Is(err, errNoRows) {
 		return nil, err
@@ -192,7 +207,49 @@ func (s *Service) LoginSocial(ctx context.Context, input SocialLoginInput, audie
 		return nil, err
 	}
 
-	return s.issueAuthResult(ctx, user, audience)
+	return s.issueAuthResult(ctx, user, audience, nil)
+}
+
+// LoginSocialBooking signs in a booking user and scopes the session to a tenant.
+func (s *Service) LoginSocialBooking(ctx context.Context, input SocialLoginInput, tenantSlug string) (*AuthResult, error) {
+	tenant, err := s.resolveTenantContext(ctx, tenantSlug)
+	if err != nil {
+		return nil, ErrAccessDenied
+	}
+	result, err := s.LoginSocial(ctx, input, "booking-web")
+	if err != nil {
+		return nil, err
+	}
+	return s.issueAuthResult(ctx, result.User, "booking-web", tenant)
+}
+
+// LoginSocialTenant signs in a tenant-web user, enforcing tenant membership and session scope.
+func (s *Service) LoginSocialTenant(ctx context.Context, input SocialLoginInput, tenantSlug string) (*AuthResult, error) {
+	tenant, err := s.resolveTenantContext(ctx, tenantSlug)
+	if err != nil {
+		return nil, ErrAccessDenied
+	}
+	result, err := s.LoginSocial(ctx, input, "tenant-web")
+	if err != nil {
+		return nil, err
+	}
+	role, err := s.repo.FindTenantRoleForUser(ctx, result.User.ID.String(), tenant.ID.String())
+	if err != nil {
+		return nil, err
+	}
+	if role == "" {
+		return nil, ErrAccessDenied
+	}
+	result.TenantRoles = map[string]string{tenant.ID.String(): role}
+	token, exp, err := s.tokens.IssueToken(result.User, "tenant-web", result.PlatformRole, result.TenantRoles, tenant.ID.String(), tenant.Slug)
+	if err != nil {
+		return nil, err
+	}
+	result.Token = token
+	result.ExpiresAt = exp
+	result.CurrentTenantID = tenant.ID.String()
+	result.CurrentTenantSlug = tenant.Slug
+	return result, nil
 }
 
 // LoginAdmin authenticates and enforces platform_admin membership.
@@ -237,12 +294,14 @@ func (s *Service) LoginTenant(ctx context.Context, input EmailLoginInput, tenant
 		tenant.ID.String(): role,
 	}
 
-	token, exp, err := s.tokens.IssueToken(result.User, "tenant-web", result.PlatformRole, result.TenantRoles)
+	token, exp, err := s.tokens.IssueToken(result.User, "tenant-web", result.PlatformRole, result.TenantRoles, tenant.ID.String(), tenant.Slug)
 	if err != nil {
 		return nil, err
 	}
 	result.Token = token
 	result.ExpiresAt = exp
+	result.CurrentTenantID = tenant.ID.String()
+	result.CurrentTenantSlug = tenant.Slug
 
 	return result, nil
 }
@@ -270,7 +329,7 @@ func (s *Service) ListUserTenantAccess(ctx context.Context, userID string) ([]Te
 	return s.repo.ListUserTenantAccess(ctx, userID)
 }
 
-func (s *Service) issueAuthResult(ctx context.Context, user *User, audience string) (*AuthResult, error) {
+func (s *Service) issueAuthResult(ctx context.Context, user *User, audience string, currentTenant *tenants.Tenant) (*AuthResult, error) {
 	platformRole, err := s.repo.FindPlatformRole(ctx, user.ID.String())
 	if err != nil {
 		return nil, err
@@ -281,19 +340,35 @@ func (s *Service) issueAuthResult(ctx context.Context, user *User, audience stri
 		return nil, err
 	}
 
-	token, exp, err := s.tokens.IssueToken(user, audience, platformRole, tenantRoles)
+	currentTenantID := ""
+	currentTenantSlug := ""
+	if currentTenant != nil {
+		currentTenantID = currentTenant.ID.String()
+		currentTenantSlug = currentTenant.Slug
+	}
+	token, exp, err := s.tokens.IssueToken(user, audience, platformRole, tenantRoles, currentTenantID, currentTenantSlug)
 	if err != nil {
 		return nil, err
 	}
 
 	return &AuthResult{
-		Token:        token,
-		TokenType:    "Bearer",
-		ExpiresAt:    exp,
-		User:         user,
-		PlatformRole: platformRole,
-		TenantRoles:  tenantRoles,
+		Token:             token,
+		TokenType:         "Bearer",
+		ExpiresAt:         exp,
+		User:              user,
+		PlatformRole:      platformRole,
+		TenantRoles:       tenantRoles,
+		CurrentTenantID:   currentTenantID,
+		CurrentTenantSlug: currentTenantSlug,
 	}, nil
+}
+
+func (s *Service) resolveTenantContext(ctx context.Context, tenantSlug string) (*tenants.Tenant, error) {
+	slug := strings.ToLower(strings.TrimSpace(tenantSlug))
+	if slug == "" {
+		return nil, ErrInvalidInput
+	}
+	return s.tenants.ResolveTenantBySlug(ctx, slug)
 }
 
 func normalizeEmail(email string) string {

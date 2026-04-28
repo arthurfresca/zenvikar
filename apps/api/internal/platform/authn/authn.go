@@ -17,15 +17,17 @@ type claimsContextKey struct{}
 
 // Claims represents the authenticated JWT payload used by the API.
 type Claims struct {
-	Issuer       string            `json:"iss"`
-	Subject      string            `json:"sub"`
-	Audience     string            `json:"aud"`
-	IssuedAt     int64             `json:"iat"`
-	ExpiresAt    int64             `json:"exp"`
-	Email        string            `json:"email"`
-	Name         string            `json:"name"`
-	PlatformRole string            `json:"platformRole,omitempty"`
-	TenantRoles  map[string]string `json:"tenantRoles,omitempty"`
+	Issuer            string            `json:"iss"`
+	Subject           string            `json:"sub"`
+	Audience          string            `json:"aud"`
+	IssuedAt          int64             `json:"iat"`
+	ExpiresAt         int64             `json:"exp"`
+	Email             string            `json:"email"`
+	Name              string            `json:"name"`
+	PlatformRole      string            `json:"platformRole,omitempty"`
+	TenantRoles       map[string]string `json:"tenantRoles,omitempty"`
+	CurrentTenantID   string            `json:"currentTenantId,omitempty"`
+	CurrentTenantSlug string            `json:"currentTenantSlug,omitempty"`
 }
 
 // ClaimsFromContext returns authenticated user claims when present.

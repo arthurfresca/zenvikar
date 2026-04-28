@@ -13,7 +13,7 @@ import (
 var (
 	ErrDateBlocked  = errors.New("date_blocked")
 	ErrOutsideHours = errors.New("outside_hours")
-	ErrSlotTaken    = errors.New("slot_taken")
+	ErrTimeTaken    = errors.New("time_taken")
 )
 
 // AvailabilityResult holds the result of an availability check.
@@ -23,7 +23,7 @@ type AvailabilityResult struct {
 	EndTime   time.Time
 }
 
-// CheckAvailability is a pure function that determines if a time slot is bookable.
+// CheckAvailability is a pure function that determines if a requested time is bookable.
 // It takes all required data as input so it can be tested without a database.
 //
 // Parameters:
@@ -32,24 +32,24 @@ type AvailabilityResult struct {
 //   - existingBookings: list of existing non-cancelled bookings for the member
 //   - service: the service being booked (for duration and buffers)
 //   - startTime: the requested booking start time
-//   - slotIntervalMinutes: the tenant's slot interval (e.g. 15). Start time must align to this.
+//   - intervalMinutes: the booking interval (e.g. 15). Start time must align to this.
 func CheckAvailability(
 	blockedDates []availability.BlockedDate,
 	openingHours []availability.OpeningHours,
 	existingBookings []Booking,
 	service services.Service,
 	startTime time.Time,
-	slotIntervalMinutes ...int,
+	intervalMinutes ...int,
 ) (*AvailabilityResult, error) {
 	interval := 0
-	if len(slotIntervalMinutes) > 0 {
-		interval = slotIntervalMinutes[0]
+	if len(intervalMinutes) > 0 {
+		interval = intervalMinutes[0]
 	}
-	// Step 0: Validate slot alignment
+	// Step 0: Validate time alignment
 	if interval > 0 {
 		minuteOfDay := startTime.Hour()*60 + startTime.Minute()
 		if minuteOfDay%interval != 0 || startTime.Second() != 0 {
-			return &AvailabilityResult{Available: false, Reason: "invalid_slot_time"}, nil
+			return &AvailabilityResult{Available: false, Reason: "invalid_time"}, nil
 		}
 	}
 
@@ -103,7 +103,7 @@ func CheckAvailability(
 		}
 		// Two intervals overlap if one starts before the other ends and vice versa
 		if effectiveStart.Before(existing.EndTime) && effectiveEnd.After(existing.StartTime) {
-			return &AvailabilityResult{Available: false, Reason: "slot_taken"}, nil
+			return &AvailabilityResult{Available: false, Reason: "time_taken"}, nil
 		}
 	}
 

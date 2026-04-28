@@ -131,16 +131,6 @@ func (r *Repository) GetServiceMemberPrice(ctx context.Context, serviceMemberID 
 	return priceCents, nil
 }
 
-// GetSlotIntervalMinutes loads tenant slot interval.
-func (r *Repository) GetSlotIntervalMinutes(ctx context.Context, tenantID uuid.UUID) (int, error) {
-	var slotInterval int
-	err := r.db.QueryRowContext(ctx, `SELECT slot_interval_minutes FROM tenants WHERE id = $1`, tenantID).Scan(&slotInterval)
-	if err != nil {
-		return 0, fmt.Errorf("loading slot interval: %w", err)
-	}
-	return slotInterval, nil
-}
-
 // ServiceMemberBelongsToTenant reports whether a service member belongs to a tenant.
 func (r *Repository) ServiceMemberBelongsToTenant(ctx context.Context, tenantID, serviceMemberID uuid.UUID) (bool, error) {
 	var ok bool
@@ -189,30 +179,43 @@ func (r *Repository) CancelByCustomer(ctx context.Context, bookingID, customerID
 }
 
 // GetByTenant returns one booking in tenant scope.
-func (r *Repository) GetByTenant(ctx context.Context, bookingID, tenantID uuid.UUID) (*Booking, error) {
-	return r.getOne(ctx, `
-		SELECT id, tenant_id, service_member_id, customer_id, price_cents, start_time, end_time, status, created_at, updated_at
-		FROM bookings WHERE id = $1 AND tenant_id = $2
+func (r *Repository) GetByTenant(ctx context.Context, bookingID, tenantID uuid.UUID) (*BookingDetails, error) {
+	return r.getOneDetailed(ctx, `
+		SELECT b.id, b.tenant_id, b.service_member_id, b.customer_id, b.price_cents, b.start_time, b.end_time, b.status, b.created_at, b.updated_at,
+		       u.name, u.email, staff.name, s.name
+		FROM bookings b
+		JOIN users u ON u.id = b.customer_id
+		JOIN service_members sm ON sm.id = b.service_member_id
+		JOIN tenant_memberships tm ON tm.id = sm.membership_id
+		JOIN users staff ON staff.id = tm.user_id
+		JOIN services s ON s.id = sm.service_id
+		WHERE b.id = $1 AND b.tenant_id = $2
 	`, bookingID, tenantID)
 }
 
 // ListByTenant returns bookings in tenant scope.
-func (r *Repository) ListByTenant(ctx context.Context, tenantID uuid.UUID, from, to *time.Time) ([]Booking, error) {
+func (r *Repository) ListByTenant(ctx context.Context, tenantID uuid.UUID, from, to *time.Time) ([]BookingDetails, error) {
 	return r.listByTenant(ctx, tenantID, nil, from, to)
 }
 
 // ListByTenantMembership returns bookings in tenant scope limited to one membership's service members.
-func (r *Repository) ListByTenantMembership(ctx context.Context, tenantID, membershipID uuid.UUID, from, to *time.Time) ([]Booking, error) {
+func (r *Repository) ListByTenantMembership(ctx context.Context, tenantID, membershipID uuid.UUID, from, to *time.Time) ([]BookingDetails, error) {
 	return r.listByTenant(ctx, tenantID, &membershipID, from, to)
 }
 
-func (r *Repository) listByTenant(ctx context.Context, tenantID uuid.UUID, membershipID *uuid.UUID, from, to *time.Time) ([]Booking, error) {
+func (r *Repository) listByTenant(ctx context.Context, tenantID uuid.UUID, membershipID *uuid.UUID, from, to *time.Time) ([]BookingDetails, error) {
 	query := `
-		SELECT id, tenant_id, service_member_id, customer_id, price_cents, start_time, end_time, status, created_at, updated_at
-		FROM bookings b`
+		SELECT b.id, b.tenant_id, b.service_member_id, b.customer_id, b.price_cents, b.start_time, b.end_time, b.status, b.created_at, b.updated_at,
+		       u.name, u.email, staff.name, s.name
+		FROM bookings b
+		JOIN users u ON u.id = b.customer_id
+		JOIN service_members sm ON sm.id = b.service_member_id
+		JOIN tenant_memberships tm ON tm.id = sm.membership_id
+		JOIN users staff ON staff.id = tm.user_id
+		JOIN services s ON s.id = sm.service_id`
 	args := []any{tenantID}
 	if membershipID != nil {
-		query += ` JOIN service_members sm ON sm.id = b.service_member_id WHERE b.tenant_id = $1 AND sm.membership_id = $2`
+		query += ` WHERE b.tenant_id = $1 AND sm.membership_id = $2`
 		args = append(args, *membershipID)
 	} else {
 		query += ` WHERE b.tenant_id = $1`
@@ -226,11 +229,11 @@ func (r *Repository) listByTenant(ctx context.Context, tenantID uuid.UUID, membe
 		args = append(args, *to)
 	}
 	query += ` ORDER BY b.start_time DESC`
-	return r.list(ctx, query, args...)
+	return r.listDetailed(ctx, query, args...)
 }
 
 // UpdateStatusInTenant updates a booking status in tenant scope.
-func (r *Repository) UpdateStatusInTenant(ctx context.Context, bookingID, tenantID uuid.UUID, status string) (*Booking, error) {
+func (r *Repository) UpdateStatusInTenant(ctx context.Context, bookingID, tenantID uuid.UUID, status string) (*BookingDetails, error) {
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE bookings SET status = $3, updated_at = NOW() WHERE id = $1 AND tenant_id = $2
 	`, bookingID, tenantID, status)
@@ -273,6 +276,21 @@ func (r *Repository) getOne(ctx context.Context, query string, args ...any) (*Bo
 	return &item, nil
 }
 
+func (r *Repository) getOneDetailed(ctx context.Context, query string, args ...any) (*BookingDetails, error) {
+	var item BookingDetails
+	err := r.db.QueryRowContext(ctx, query, args...).Scan(
+		&item.ID, &item.TenantID, &item.ServiceMemberID, &item.CustomerID, &item.PriceCents, &item.StartTime, &item.EndTime, &item.Status, &item.CreatedAt, &item.UpdatedAt,
+		&item.CustomerName, &item.CustomerEmail, &item.MemberName, &item.ServiceName,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("loading booking details: %w", err)
+	}
+	return &item, nil
+}
+
 func (r *Repository) list(ctx context.Context, query string, args ...any) ([]Booking, error) {
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -284,6 +302,26 @@ func (r *Repository) list(ctx context.Context, query string, args ...any) ([]Boo
 		var item Booking
 		if err := rows.Scan(&item.ID, &item.TenantID, &item.ServiceMemberID, &item.CustomerID, &item.PriceCents, &item.StartTime, &item.EndTime, &item.Status, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scanning booking: %w", err)
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) listDetailed(ctx context.Context, query string, args ...any) ([]BookingDetails, error) {
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("listing booking details: %w", err)
+	}
+	defer rows.Close()
+	var out []BookingDetails
+	for rows.Next() {
+		var item BookingDetails
+		if err := rows.Scan(
+			&item.ID, &item.TenantID, &item.ServiceMemberID, &item.CustomerID, &item.PriceCents, &item.StartTime, &item.EndTime, &item.Status, &item.CreatedAt, &item.UpdatedAt,
+			&item.CustomerName, &item.CustomerEmail, &item.MemberName, &item.ServiceName,
+		); err != nil {
+			return nil, fmt.Errorf("scanning booking details: %w", err)
 		}
 		out = append(out, item)
 	}

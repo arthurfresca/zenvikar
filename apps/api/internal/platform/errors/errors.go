@@ -10,13 +10,13 @@ import (
 
 // Error codes used across the API.
 const (
-	CodeTenantNotFound = "tenant_not_found"
-	CodeTenantDisabled = "tenant_disabled"
-	CodeSlotUnavailable = "slot_unavailable"
-	CodeSlugReserved   = "slug_reserved"
-	CodeForbidden      = "forbidden"
-	CodeInfraFailure   = "service_unavailable"
-	CodeInternalError  = "internal_error"
+	CodeTenantNotFound  = "tenant_not_found"
+	CodeTenantDisabled  = "tenant_disabled"
+	CodeTimeUnavailable = "time_unavailable"
+	CodeSlugReserved    = "slug_reserved"
+	CodeForbidden       = "forbidden"
+	CodeInfraFailure    = "service_unavailable"
+	CodeInternalError   = "internal_error"
 )
 
 // AppError represents a structured API error with an error code,
@@ -38,12 +38,12 @@ func (e *AppError) Error() string {
 // codeStatusMap maps known error codes to their HTTP status codes.
 var codeStatusMap = map[string]int{
 	CodeTenantNotFound:  http.StatusNotFound,            // 404
-	CodeTenantDisabled:  http.StatusForbidden,            // 403
-	CodeSlotUnavailable: http.StatusConflict,             // 409
-	CodeSlugReserved:    http.StatusUnprocessableEntity,   // 422
-	CodeForbidden:       http.StatusForbidden,            // 403
-	CodeInfraFailure:    http.StatusServiceUnavailable,   // 503
-	CodeInternalError:   http.StatusInternalServerError,  // 500
+	CodeTenantDisabled:  http.StatusForbidden,           // 403
+	CodeTimeUnavailable: http.StatusConflict,            // 409
+	CodeSlugReserved:    http.StatusUnprocessableEntity, // 422
+	CodeForbidden:       http.StatusForbidden,           // 403
+	CodeInfraFailure:    http.StatusServiceUnavailable,  // 503
+	CodeInternalError:   http.StatusInternalServerError, // 500
 }
 
 // New creates an AppError with the given code and message.
@@ -70,9 +70,9 @@ func NewTenantDisabled() *AppError {
 	return New(CodeTenantDisabled, "This booking page is currently unavailable")
 }
 
-// NewSlotUnavailable returns a slot_unavailable error.
-func NewSlotUnavailable() *AppError {
-	return New(CodeSlotUnavailable, "The requested time slot is no longer available")
+// NewTimeUnavailable returns a time_unavailable error.
+func NewTimeUnavailable() *AppError {
+	return New(CodeTimeUnavailable, "The requested time is no longer available")
 }
 
 // NewSlugReserved returns a slug_reserved error.
