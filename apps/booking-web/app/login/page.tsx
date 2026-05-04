@@ -14,6 +14,8 @@ export default function BookingLoginPage() {
   const [isReauth, setIsReauth] = useState(false);
   const [origin, setOrigin] = useState("");
   const [locale, setLocale] = useState("en");
+  const [brandPrimary, setBrandPrimary] = useState<string | null>(null);
+  const [brandPrimaryText, setBrandPrimaryText] = useState<string | null>(null);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,6 +28,11 @@ export default function BookingLoginPage() {
     setIsReauth(params.get("reauth") === "1");
     setOrigin(window.location.origin);
     setLocale(params.get("locale") || "en");
+
+    const rawPrimary = params.get("primaryColor") || "";
+    const rawPrimaryText = params.get("primaryTextColor") || "";
+    if (/^[0-9a-fA-F]{6}$/.test(rawPrimary)) setBrandPrimary(`#${rawPrimary}`);
+    if (/^[0-9a-fA-F]{6}$/.test(rawPrimaryText)) setBrandPrimaryText(`#${rawPrimaryText}`);
 
     const authToken = params.get("authToken");
     const authExpiresAt = params.get("authExpiresAt");
@@ -86,8 +93,18 @@ export default function BookingLoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-900 shadow-lg">
-            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div
+            className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl shadow-lg"
+            style={{ backgroundColor: brandPrimary || "#111827" }}
+          >
+            <svg
+              className="h-6 w-6"
+              style={{ color: brandPrimaryText || "#ffffff" }}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
@@ -108,7 +125,7 @@ export default function BookingLoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={t.email_placeholder}
-                className="mt-1.5 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-500 focus:ring-4 focus:ring-gray-100"
+                className="mt-1.5 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-500 focus:ring-4 focus:ring-gray-400"
               />
             </div>
             <div>
@@ -122,7 +139,7 @@ export default function BookingLoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t.password_placeholder}
-                className="mt-1.5 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-500 focus:ring-4 focus:ring-gray-100"
+                className="mt-1.5 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-500 focus:ring-4 focus:ring-gray-400"
               />
             </div>
 
@@ -138,7 +155,11 @@ export default function BookingLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 active:scale-[0.98] disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
+              style={{
+                backgroundColor: brandPrimary || "#111827",
+                color: brandPrimaryText || "#ffffff",
+              }}
             >
               {loading ? (
                 <>

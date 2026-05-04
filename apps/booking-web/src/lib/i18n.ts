@@ -43,6 +43,18 @@ export type BookingTranslations = {
   creating_account: string;
   already_have_account: string;
   sign_in_link: string;
+  sign_out: string;
+  confirm_booking: string;
+  back_to_times: string;
+  no_upcoming_visits: string;
+  no_upcoming_visits_desc: string;
+  view_all_bookings: string;
+  specialist_label: string;
+  service_label: string;
+  time_label: string;
+  price_label: string;
+  error_slot_taken: string;
+  error_server: string;
 };
 
 const en: BookingTranslations = {
@@ -58,7 +70,7 @@ const en: BookingTranslations = {
   no_services: "No services are available right now.",
   duration_min: "min",
   select_specialist: "Select a specialist",
-  choose_provider: "Choose a provider on the left to see their available times.",
+  choose_provider: "Choose a provider to see their available times.",
   pick_date: "Pick a date",
   check: "Check",
   available_times: "Available times",
@@ -88,6 +100,18 @@ const en: BookingTranslations = {
   creating_account: "Creating account…",
   already_have_account: "Already have an account?",
   sign_in_link: "Sign in",
+  sign_out: "Sign out",
+  confirm_booking: "Confirm your booking",
+  back_to_times: "Back to times",
+  no_upcoming_visits: "No upcoming visits",
+  no_upcoming_visits_desc: "Book your first appointment below!",
+  view_all_bookings: "View all",
+  specialist_label: "Specialist",
+  service_label: "Service",
+  time_label: "Time",
+  price_label: "Price",
+  error_slot_taken: "This time slot is no longer available. Please choose another time.",
+  error_server: "A server error occurred. Please try again later.",
 };
 
 const pt: BookingTranslations = {
@@ -133,6 +157,18 @@ const pt: BookingTranslations = {
   creating_account: "Criando conta…",
   already_have_account: "Já tem uma conta?",
   sign_in_link: "Entrar",
+  sign_out: "Sair",
+  confirm_booking: "Confirmar agendamento",
+  back_to_times: "Voltar para horários",
+  no_upcoming_visits: "Nenhuma visita próxima",
+  no_upcoming_visits_desc: "Agende seu primeiro compromisso abaixo!",
+  view_all_bookings: "Ver todos",
+  specialist_label: "Especialista",
+  service_label: "Serviço",
+  time_label: "Horário",
+  price_label: "Preço",
+  error_slot_taken: "Este horário não está mais disponível. Por favor, escolha outro horário.",
+  error_server: "Ocorreu um erro no servidor. Por favor, tente novamente mais tarde.",
 };
 
 export function getTranslations(locale: string): BookingTranslations {

@@ -46,7 +46,11 @@ export async function POST(request: NextRequest) {
       loginURL.searchParams.set("next", `${returnTo.pathname}${returnTo.search}`);
       return NextResponse.redirect(loginURL);
     }
-    appendResult(returnTo, "bookingError", "booking_failed");
+    const errorCode =
+      response.status === 409 ? "slot_taken" :
+      response.status >= 500 ? "server_error" :
+      "booking_failed";
+    appendResult(returnTo, "bookingError", errorCode);
     return NextResponse.redirect(returnTo);
   }
 

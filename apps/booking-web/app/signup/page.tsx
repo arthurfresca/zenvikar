@@ -76,7 +76,7 @@ export default function BookingSignupPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t.name_placeholder}
-                className="mt-1.5 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-500 focus:ring-4 focus:ring-gray-100"
+                className="mt-1.5 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-500 focus:ring-4 focus:ring-gray-400"
               />
             </div>
             <div>
@@ -90,7 +90,7 @@ export default function BookingSignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={t.email_placeholder}
-                className="mt-1.5 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-500 focus:ring-4 focus:ring-gray-100"
+                className="mt-1.5 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-500 focus:ring-4 focus:ring-gray-400"
               />
             </div>
             <div>
@@ -105,7 +105,7 @@ export default function BookingSignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={t.password_placeholder}
-                className="mt-1.5 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-500 focus:ring-4 focus:ring-gray-100"
+                className="mt-1.5 w-full rounded-xl border border-gray-300 px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-500 focus:ring-4 focus:ring-gray-400"
               />
             </div>
             <div>
@@ -116,7 +116,7 @@ export default function BookingSignupPage() {
                 id="locale"
                 value={locale}
                 onChange={(e) => setLocale(e.target.value as "en" | "pt")}
-                className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-4 focus:ring-gray-100"
+                className="mt-1.5 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-4 focus:ring-gray-400"
               >
                 <option value="en">English</option>
                 <option value="pt">Português</option>

@@ -5,6 +5,8 @@ import { fetchServerApi } from "@/lib/server-api";
 import { getTranslations } from "@/lib/i18n";
 import type { Booking, Service, ServiceMember, Tenant } from "@zenvikar/types";
 import { LogoutButton } from "./components/logout-button";
+import { BookingConfirmButton } from "./components/booking-confirm";
+import { Notifications } from "./components/notifications";
 
 const TOKEN_COOKIE = "zenvikar_booking_token";
 
@@ -29,6 +31,7 @@ type PageSearchParams = Promise<{
   date?: string;
   booking?: string;
   bookingError?: string;
+  allBookings?: string;
 }>;
 
 async function loadSession(token: string) {
@@ -108,13 +111,15 @@ function getContrastColor(hex: string) {
   const normalized = hex.replace("#", "");
   const value =
     normalized.length === 3
-      ? normalized.split("").map((char) => char + char).join("")
+      ? normalized.split("").map((c) => c + c).join("")
       : normalized;
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-  return brightness > 155 ? "#111827" : "#ffffff";
+  const toLinear = (c: number) =>
+    c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  const r = toLinear(parseInt(value.slice(0, 2), 16) / 255);
+  const g = toLinear(parseInt(value.slice(2, 4), 16) / 255);
+  const b = toLinear(parseInt(value.slice(4, 6), 16) / 255);
+  const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return (L + 0.05) / 0.05 > 1.05 / (L + 0.05) ? "#111827" : "#ffffff";
 }
 
 function getInitials(name: string) {
@@ -127,9 +132,9 @@ function getInitials(name: string) {
 }
 
 function statusStyle(status: string) {
-  if (status === "confirmed") return { bg: "#d1fae5", text: "#065f46" };
-  if (status === "cancelled") return { bg: "#fee2e2", text: "#991b1b" };
-  return { bg: "#fef3c7", text: "#92400e" };
+  if (status === "confirmed") return { bg: "#d1fae5", text: "#065f46", icon: "✓" };
+  if (status === "cancelled") return { bg: "#fee2e2", text: "#991b1b", icon: "✕" };
+  return { bg: "#fef3c7", text: "#92400e", icon: "⏳" };
 }
 
 export default async function BookingPage({
@@ -182,19 +187,35 @@ export default async function BookingPage({
       durationMinutes: service.durationMinutes,
     }))
   );
+
+  const enrichedBookings = myBookings.map((b) => ({
+    ...b,
+    member: members.find((m) => m.id === b.serviceMemberId) ?? null,
+  }));
+
+  const showAllBookings = params.allBookings === "1";
+  const displayedBookings = showAllBookings ? enrichedBookings : enrichedBookings.slice(0, 6);
+
+  const viewAllSearchParams = new URLSearchParams({ allBookings: "1" });
+  if (params.member) viewAllSearchParams.set("member", params.member);
+  if (params.date) viewAllSearchParams.set("date", params.date);
+  const viewAllHref = `/?${viewAllSearchParams.toString()}`;
+
   const selectedDate = getInitialDate(params.date);
   const selectedMember = members.find((member) => member.id === params.member) || members[0] || null;
   const times = selectedMember
     ? await loadAvailability(tenant.slug, selectedMember.id, selectedDate)
     : [];
   const returnTo = `/${selectedMember ? `?member=${encodeURIComponent(selectedMember.id)}&date=${encodeURIComponent(selectedDate)}` : ""}`;
+  const primaryTextColor = getContrastColor(tenant.colorPrimary);
+  const accentTextColor = getContrastColor(tenant.colorAccent);
   const loginHref = `/login?${new URLSearchParams({
     reauth: sessionScopedElsewhere ? "1" : "0",
     next: returnTo || "/",
     locale: tenant.defaultLocale,
+    primaryColor: tenant.colorPrimary.replace("#", ""),
+    primaryTextColor: primaryTextColor.replace("#", ""),
   }).toString()}`;
-  const primaryTextColor = getContrastColor(tenant.colorPrimary);
-  const accentTextColor = getContrastColor(tenant.colorAccent);
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -269,12 +290,12 @@ export default async function BookingPage({
                 >
                   {session.name}
                 </div>
-                <LogoutButton />
+                <LogoutButton label={t.sign_out} />
               </div>
             ) : (
               <a
                 href={loginHref}
-                className="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold shadow-md transition hover:shadow-lg active:scale-[0.98]"
+                className="flex min-h-11 items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold shadow-md transition hover:shadow-lg active:scale-[0.98]"
                 style={{ backgroundColor: tenant.colorAccent, color: accentTextColor }}
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -289,29 +310,16 @@ export default async function BookingPage({
 
       <div className="mx-auto max-w-6xl space-y-8 px-6 py-8">
         {/* Notifications */}
-        {params.booking === "created" ? (
-          <div
-            className="flex items-center gap-3 rounded-2xl border p-4 text-sm font-medium"
-            style={{
-              borderColor: withAlpha(tenant.colorAccent, "40"),
-              backgroundColor: withAlpha(tenant.colorAccent, "12"),
-              color: tenant.colorPrimary,
-            }}
-          >
-            <svg className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {t.booking_success}
-          </div>
-        ) : null}
-        {params.bookingError ? (
-          <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-            <svg className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {t.booking_error}
-          </div>
-        ) : null}
+        <Notifications
+          booking={params.booking}
+          bookingError={params.bookingError}
+          accentColor={tenant.colorAccent}
+          primaryColor={tenant.colorPrimary}
+          successText={t.booking_success}
+          genericErrorText={t.booking_error}
+          slotTakenText={t.error_slot_taken}
+          serverErrorText={t.error_server}
+        />
 
         {/* My upcoming visits */}
         {session && myBookings.length > 0 ? (
@@ -326,7 +334,7 @@ export default async function BookingPage({
               </span>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {myBookings.slice(0, 6).map((booking) => {
+              {displayedBookings.map((booking) => {
                 const style = statusStyle(booking.status);
                 const statusLabel =
                   booking.status === "confirmed" ? t.status_confirmed :
@@ -345,9 +353,23 @@ export default async function BookingPage({
                         className="flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
                         style={{ backgroundColor: style.bg, color: style.text }}
                       >
-                        {statusLabel}
+                        <span aria-hidden="true">{style.icon} </span>{statusLabel}
                       </span>
                     </div>
+                    {booking.member ? (
+                      <div className="flex items-center gap-2.5 border-t border-gray-100 pt-3">
+                        <div
+                          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-xs font-bold"
+                          style={{ backgroundColor: withAlpha(tenant.colorPrimary, "14"), color: tenant.colorPrimary }}
+                        >
+                          {getInitials(booking.member.memberName)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-gray-900">{booking.member.memberName}</p>
+                          <p className="truncate text-xs text-gray-500">{booking.member.serviceName}</p>
+                        </div>
+                      </div>
+                    ) : null}
                     <div className="flex items-center justify-between gap-3 border-t border-gray-100 pt-3">
                       <p className="text-sm font-semibold" style={{ color: tenant.colorPrimary }}>
                         {formatMoney(booking.priceCents, tenant.currency)}
@@ -358,15 +380,33 @@ export default async function BookingPage({
                 );
               })}
             </div>
+            {!showAllBookings && myBookings.length > 6 ? (
+              <div className="mt-4 text-center">
+                <a
+                  href={viewAllHref}
+                  className="text-sm font-semibold underline underline-offset-2"
+                  style={{ color: tenant.colorPrimary }}
+                >
+                  {t.view_all_bookings} ({myBookings.length})
+                </a>
+              </div>
+            ) : null}
+          </section>
+        ) : session ? (
+          <section>
+            <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-8 text-center">
+              <p className="font-medium text-gray-700">{t.no_upcoming_visits}</p>
+              <p className="mt-1 text-sm text-gray-500">{t.no_upcoming_visits_desc}</p>
+            </div>
           </section>
         ) : null}
 
         {/* Main booking section */}
         <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-          {/* Services */}
-          <section>
+          {/* Services — shown second on mobile, first on desktop */}
+          <section className="order-2 lg:order-1">
             <h2 className="mb-4 text-lg font-semibold text-gray-900">
-              {selectedMember ? t.change_specialist : t.choose_specialist}
+              {params.member ? t.change_specialist : t.choose_specialist}
             </h2>
             {services.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-gray-300 bg-white p-10 text-center">
@@ -467,8 +507,8 @@ export default async function BookingPage({
             )}
           </section>
 
-          {/* Availability */}
-          <aside>
+          {/* Availability — shown first on mobile, second on desktop */}
+          <aside className="order-1 lg:order-2">
             <div className="sticky top-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
               {!selectedMember ? (
                 <div className="flex flex-col items-center py-6 text-center">
@@ -515,7 +555,7 @@ export default async function BookingPage({
                         type="date"
                         name="date"
                         defaultValue={selectedDate}
-                        className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-4 focus:ring-gray-100"
+                        className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-4 focus:ring-gray-400"
                         style={{ colorScheme: "light" }}
                       />
                       <button
@@ -546,39 +586,45 @@ export default async function BookingPage({
                       </div>
                     ) : (
                       <div className="grid grid-cols-2 gap-2">
-                        {times.map((time) => (
-                          <form key={time.startTime} action="/book" method="POST">
-                            <input type="hidden" name="tenantSlug" value={tenant.slug} />
-                            <input type="hidden" name="serviceMemberId" value={selectedMember.id} />
-                            <input type="hidden" name="startTime" value={time.startTime} />
-                            <input type="hidden" name="returnTo" value={returnTo} />
-                            {session ? (
-                              <button
-                                type="submit"
-                                className="w-full rounded-xl border px-3 py-2.5 text-center text-sm font-medium transition hover:opacity-90 active:scale-[0.97]"
-                                style={{
-                                  borderColor: withAlpha(tenant.colorAccent, "55"),
-                                  backgroundColor: withAlpha(tenant.colorAccent, "12"),
-                                  color: tenant.colorPrimary,
-                                }}
-                              >
-                                {formatTime(time.startTime, tenant.timezone)}
-                              </button>
-                            ) : (
-                              <a
-                                href={loginHref}
-                                className="block rounded-xl border px-3 py-2.5 text-center text-sm font-medium transition hover:opacity-90"
-                                style={{
-                                  borderColor: withAlpha(tenant.colorAccent, "55"),
-                                  backgroundColor: withAlpha(tenant.colorAccent, "12"),
-                                  color: tenant.colorPrimary,
-                                }}
-                              >
-                                {formatTime(time.startTime, tenant.timezone)}
-                              </a>
-                            )}
-                          </form>
-                        ))}
+                        {times.map((time) =>
+                          session ? (
+                            <BookingConfirmButton
+                              key={time.startTime}
+                              timeLabel={formatTime(time.startTime, tenant.timezone)}
+                              specialistName={selectedMember.memberName}
+                              serviceName={selectedMember.serviceName}
+                              price={formatMoney(selectedMember.priceCents, tenant.currency)}
+                              tenantSlug={tenant.slug}
+                              serviceMemberId={selectedMember.id}
+                              startTime={time.startTime}
+                              returnTo={returnTo}
+                              primaryColor={tenant.colorPrimary}
+                              primaryTextColor={primaryTextColor}
+                              accentColor={tenant.colorAccent}
+                              labels={{
+                                confirm: t.confirm_booking,
+                                cancel: t.back_to_times,
+                                specialist: t.specialist_label,
+                                service: t.service_label,
+                                time: t.time_label,
+                                price: t.price_label,
+                              }}
+                            />
+                          ) : (
+                            <a
+                              key={time.startTime}
+                              href={loginHref}
+                              className="block min-h-11 rounded-xl border px-3 py-3 text-center text-sm font-medium transition hover:opacity-90"
+                              style={{
+                                borderColor: withAlpha(tenant.colorAccent, "55"),
+                                backgroundColor: withAlpha(tenant.colorAccent, "12"),
+                                color: tenant.colorPrimary,
+                              }}
+                            >
+                              {formatTime(time.startTime, tenant.timezone)}
+                            </a>
+                          )
+                        )}
                       </div>
                     )}
 
