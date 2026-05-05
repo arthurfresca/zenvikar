@@ -161,7 +161,7 @@ const pt: BookingTranslations = {
   confirm_booking: "Confirmar agendamento",
   back_to_times: "Voltar para horários",
   no_upcoming_visits: "Nenhuma visita próxima",
-  no_upcoming_visits_desc: "Agende seu primeiro compromisso abaixo!",
+  no_upcoming_visits_desc: "Marque sua primeira visita escolhendo um serviço abaixo.",
   view_all_bookings: "Ver todos",
   specialist_label: "Especialista",
   service_label: "Serviço",
